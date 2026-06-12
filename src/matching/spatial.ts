@@ -107,17 +107,47 @@ export class SpatialIndex {
   }
 }
 
-/** Sample points along the segment's coordinate array (quarter, mid, three-quarter). */
+const SAMPLE_FRACTIONS = [0.1, 0.3, 0.5, 0.7, 0.9];
+
+/**
+ * Sample points spread along the segment by ARC LENGTH, not by coordinate
+ * index: Waze geometries concentrate vertices near curves and junctions, and
+ * index-based sampling clustered every sample there (real false positive:
+ * "Chemin de la Poste" in Avenches voted to the cross street at its junction).
+ */
 export function samplePoints(geometry: LineString): number[][] {
-  const coords = geometry.coordinates;
+  const coords = geometry.coordinates as number[][];
   if (coords.length === 0) return [];
-  if (coords.length <= 2) {
-    const a = coords[0] as number[];
-    const b = (coords[coords.length - 1] ?? a) as number[];
-    return [[((a[0] as number) + (b[0] as number)) / 2, ((a[1] as number) + (b[1] as number)) / 2]];
+  if (coords.length === 1) return [coords[0] as number[]];
+
+  const lonScale = Math.cos((((coords[0] as number[])[1] as number) * Math.PI) / 180);
+  const planar = (a: number[], b: number[]): number =>
+    Math.hypot(((b[0] as number) - (a[0] as number)) * lonScale, (b[1] as number) - (a[1] as number));
+
+  const cumulative = [0];
+  for (let i = 1; i < coords.length; i++) {
+    cumulative.push(
+      (cumulative[i - 1] as number) + planar(coords[i - 1] as number[], coords[i] as number[]),
+    );
   }
-  const at = (f: number): number[] => coords[Math.floor((coords.length - 1) * f)] as number[];
-  return [at(0.25), at(0.5), at(0.75)];
+  const total = cumulative[cumulative.length - 1] as number;
+  if (total === 0) return [coords[0] as number[]];
+
+  const fractions = coords.length === 2 ? [0.5] : SAMPLE_FRACTIONS;
+  return fractions.map((fraction) => {
+    const target = fraction * total;
+    let i = 1;
+    while (i < cumulative.length - 1 && (cumulative[i] as number) < target) i++;
+    const before = cumulative[i - 1] as number;
+    const stepLength = (cumulative[i] as number) - before;
+    const t = stepLength > 0 ? (target - before) / stepLength : 0;
+    const a = coords[i - 1] as number[];
+    const b = coords[i] as number[];
+    return [
+      (a[0] as number) + ((b[0] as number) - (a[0] as number)) * t,
+      (a[1] as number) + ((b[1] as number) - (a[1] as number)) * t,
+    ];
+  });
 }
 
 /**

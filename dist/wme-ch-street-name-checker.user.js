@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.1.1
+// @version      1.1.2
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -1282,16 +1282,36 @@
       return best;
     }
   };
+  var SAMPLE_FRACTIONS = [0.1, 0.3, 0.5, 0.7, 0.9];
   function samplePoints(geometry) {
     const coords = geometry.coordinates;
     if (coords.length === 0) return [];
-    if (coords.length <= 2) {
-      const a = coords[0];
-      const b = coords[coords.length - 1] ?? a;
-      return [[(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]];
+    if (coords.length === 1) return [coords[0]];
+    const lonScale = Math.cos(coords[0][1] * Math.PI / 180);
+    const planar = (a, b) => Math.hypot((b[0] - a[0]) * lonScale, b[1] - a[1]);
+    const cumulative = [0];
+    for (let i = 1; i < coords.length; i++) {
+      cumulative.push(
+        cumulative[i - 1] + planar(coords[i - 1], coords[i])
+      );
     }
-    const at = (f) => coords[Math.floor((coords.length - 1) * f)];
-    return [at(0.25), at(0.5), at(0.75)];
+    const total = cumulative[cumulative.length - 1];
+    if (total === 0) return [coords[0]];
+    const fractions = coords.length === 2 ? [0.5] : SAMPLE_FRACTIONS;
+    return fractions.map((fraction) => {
+      const target = fraction * total;
+      let i = 1;
+      while (i < cumulative.length - 1 && cumulative[i] < target) i++;
+      const before = cumulative[i - 1];
+      const stepLength = cumulative[i] - before;
+      const t2 = stepLength > 0 ? (target - before) / stepLength : 0;
+      const a = coords[i - 1];
+      const b = coords[i];
+      return [
+        a[0] + (b[0] - a[0]) * t2,
+        a[1] + (b[1] - a[1]) * t2
+      ];
+    });
   }
   function nearestOfficial(geometry, index, maxMeters = NEAR_STREET_M) {
     const votes = /* @__PURE__ */ new Map();
@@ -1995,7 +2015,7 @@ ${statusChipRules}
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"1.1.1"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"1.1.2"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/wme-ch-street-name-checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -2547,7 +2567,7 @@ ${statusChipRules}
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.1.1"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.1.2"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

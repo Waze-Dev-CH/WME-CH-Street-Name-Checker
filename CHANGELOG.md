@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.2] - 2026-06-12
+
+### Fixed
+- False `WRONG_STREET` on segments with dense vertices near a junction (reported on "Chemin de la Poste" in Avenches, wrongly suggesting the cross street "Rue René Grandjean"): spatial samples are now spread by arc length (5 points at 10-90% of the segment's real length) instead of by coordinate index, so vertex clusters at curves and junctions no longer skew the nearest-street vote.
+
 ## [1.1.1] - 2026-06-12
 
 ### Fixed

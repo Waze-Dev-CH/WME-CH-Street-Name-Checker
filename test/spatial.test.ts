@@ -79,8 +79,13 @@ describe("samplePoints", () => {
     expect(points[0]?.[0]).toBeCloseTo(6.605, 6);
   });
 
-  it("returns three samples for longer segments", () => {
-    expect(samplePoints(segmentAt(0))).toHaveLength(3);
+  it("returns five arc-length-spread samples for longer segments", () => {
+    const points = samplePoints(segmentAt(0));
+    expect(points).toHaveLength(5);
+    // segment spans lon 6.602 -> 6.608; samples at 10%..90% of the LENGTH
+    expect(points[0]?.[0]).toBeCloseTo(6.6026, 4);
+    expect(points[2]?.[0]).toBeCloseTo(6.605, 4);
+    expect(points[4]?.[0]).toBeCloseTo(6.6074, 4);
   });
 });
 
@@ -124,6 +129,59 @@ describe("SpatialIndex / nearestOfficial", () => {
     const spatial = new SpatialIndex(index.list);
     expect(spatial.size).toBe(0);
     expect(nearestOfficial(segmentAt(0), spatial)).toBeNull();
+  });
+});
+
+
+describe("regression: Chemin de la Poste (Avenches)", () => {
+  // Real-world shape: the official axis covers only the northern part of the
+  // Waze segment, the cross street starts at the southern junction, and the
+  // Waze geometry has DENSE vertices near that junction. Index-based sampling
+  // used to cluster every sample there and vote for the cross street.
+  const M = 1 / 110_574; // ≈ 1 meter in degrees of latitude
+
+  const officials = [
+    // own street: vertical axis covering the northern 60 m only
+    makeOfficial("Chemin de la Poste", {
+      lines: [
+        [
+          [6.6, LAT + 100 * M],
+          [6.6, LAT + 40 * M],
+        ],
+      ],
+    }),
+    // cross street: horizontal axis at the southern junction
+    makeOfficial("Rue René Grandjean", {
+      lines: [
+        [
+          [6.599, LAT],
+          [6.601, LAT],
+        ],
+      ],
+    }),
+  ];
+
+  // Waze segment along the full 100 m, with 8 of its 10 vertices in the last 20 m
+  const wazeSegment: LineString = {
+    type: "LineString",
+    coordinates: [
+      [6.6, LAT + 100 * M],
+      [6.6, LAT + 20 * M],
+      ...Array.from({ length: 8 }, (_, i) => [6.6, LAT + (18 - i * 2.5) * M]),
+    ],
+  };
+
+  it("votes for the street covering most of the segment, not the junction cluster", () => {
+    const index = new OfficialIndex(officials);
+    const spatial = new SpatialIndex(index.list);
+    const hit = nearestOfficial(wazeSegment, spatial);
+    expect(hit?.entry.namePart).toBe("Chemin de la Poste");
+  });
+
+  it("measures a small distance to the own axis thanks to spread samples", () => {
+    const index = new OfficialIndex(officials);
+    const poste = index.list.find((e) => e.namePart === "Chemin de la Poste");
+    expect(distanceToEntryM(wazeSegment, poste!)).toBeLessThan(10);
   });
 });
 
