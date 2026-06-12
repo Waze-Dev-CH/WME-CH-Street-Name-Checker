@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.1.3
+// @version      1.1.4
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -1493,7 +1493,7 @@
     const heightKm = (maxLat - minLat) * 110.57;
     return widthKm * heightKm;
   }
-  var Scanner = class {
+  var Scanner = class _Scanner {
     constructor(sdk2, fetcher, settings) {
       this.sdk = sdk2;
       this.fetcher = fetcher;
@@ -1503,8 +1503,10 @@
     fetcher;
     settings;
     generation = 0;
+    evalGeneration = 0;
     controller = null;
     debounceTimer;
+    reevalTimer;
     lastIndex = null;
     lastSpatialIndex = null;
     /** Tile keys covered by lastIndex; segments outside are not name-checked. */
@@ -1568,12 +1570,22 @@
       clearTimeout(this.debounceTimer);
       this.publish({ state: "disabled", issues: /* @__PURE__ */ new Map(), progress: null });
     }
-    /** Re-run evaluation against the last fetched official index, without refetching. */
+    /**
+     * Re-run evaluation against the last fetched official index, without
+     * refetching. Debounced: wme-after-edit fires on EVERY WME edit (including
+     * plain node moves) and a full synchronous re-evaluation per edit was the
+     * main source of perceived jank while editing.
+     */
     reevaluate() {
       if (isFixInFlight()) return;
-      if (this.paused || !this.settings.get().enabled || !this.lastIndex) return;
-      this.evaluateAll(this.lastIndex);
-      this.publish({ state: "done" });
+      clearTimeout(this.reevalTimer);
+      this.reevalTimer = setTimeout(() => {
+        const index = this.lastIndex;
+        if (isFixInFlight() || this.paused || !this.settings.get().enabled || !index) return;
+        void this.runEvaluation(index).then((completed) => {
+          if (completed) this.publish({ state: "done" });
+        });
+      }, 300);
     }
     async scan() {
       if (this.paused) return;
@@ -1606,7 +1618,8 @@
         this.lastIndex = index;
         this.lastSpatialIndex = new SpatialIndex(index.list);
         this.coveredTiles = new Set(tileKeysForBbox(bbox));
-        this.evaluateAll(index);
+        const completed = await this.runEvaluation(index);
+        if (!completed || gen !== this.generation) return;
         this.publish({ state: "done", officialStreetCount: index.streetCount });
       } catch (err) {
         if (controller.signal.aborted || gen !== this.generation) return;
@@ -1614,12 +1627,25 @@
         this.publish({ state: "error", error: err instanceof Error ? err.message : String(err) });
       }
     }
-    evaluateAll(index) {
+    /** Chunk size: keeps every main-thread task short while panning WME. */
+    static EVAL_CHUNK = 250;
+    /**
+     * Evaluate all loaded segments in chunks, yielding to the event loop between
+     * chunks. Returns false when superseded by a newer evaluation.
+     */
+    async runEvaluation(index) {
+      const gen = ++this.evalGeneration;
       const settings = this.settings.get();
       const issues = /* @__PURE__ */ new Map();
       const stats = { ok: 0, okAlt: 0, skipped: 0, total: 0 };
       const segments = this.sdk.DataModel.Segments.getAll();
-      for (const segment of segments) {
+      const spatial = settings.geometryMatching ? this.lastSpatialIndex : null;
+      for (let i = 0; i < segments.length; i++) {
+        if (i > 0 && i % _Scanner.EVAL_CHUNK === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          if (gen !== this.evalGeneration) return false;
+        }
+        const segment = segments[i];
         stats.total++;
         if (!this.isCovered(segment)) {
           stats.skipped++;
@@ -1628,7 +1654,7 @@
         let verdict;
         try {
           const address = this.sdk.DataModel.Segments.getAddress({ segmentId: segment.id });
-          const nearest = settings.geometryMatching && this.lastSpatialIndex ? nearestOfficial(segment.geometry, this.lastSpatialIndex) : null;
+          const nearest = spatial && settings.checkedRoadTypes.includes(segment.roadType) ? nearestOfficial(segment.geometry, spatial) : null;
           verdict = evaluateSegment(segment, address, index, settings, nearest);
         } catch {
           stats.skipped++;
@@ -1662,6 +1688,7 @@
         }
       }
       this.publish({ issues, stats, unsavedCount: this.safeUnsavedCount() });
+      return true;
     }
     isCovered(segment) {
       const covered = this.coveredTiles;
@@ -1940,6 +1967,8 @@ ${statusChipRules}
     groupsBox;
     activeFilters = /* @__PURE__ */ new Set();
     expandedGroups = /* @__PURE__ */ new Set();
+    /** Last issues map rendered into chips/groups, to skip redundant DOM rebuilds. */
+    lastRenderedIssues = null;
     selectedSegmentIds = /* @__PURE__ */ new Set();
     orderedIssueIds = [];
     nextIssuePointer = -1;
@@ -1960,6 +1989,7 @@ ${statusChipRules}
     rebuild() {
       this.pane.replaceChildren();
       this.buildSkeleton();
+      this.lastRenderedIssues = null;
       this.render(this.scanner.getSnapshot());
     }
     buildSkeleton() {
@@ -2015,7 +2045,7 @@ ${statusChipRules}
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"1.1.3"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"1.1.4"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/wme-ch-street-name-checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -2035,7 +2065,7 @@ ${statusChipRules}
       }
       return details;
     }
-    render(snapshot) {
+    render(snapshot, force = false) {
       const { state, issues, stats, officialStreetCount, progress, error } = snapshot;
       let statusText = t(STATE_KEYS[state]);
       if (state === "fetching" && progress) statusText += ` ${progress.done}/${progress.total}`;
@@ -2050,6 +2080,8 @@ ${statusChipRules}
       this.statusLine.textContent = statusText;
       this.statusLine.classList.toggle("chk-error", state === "error");
       this.unsavedBadge.textContent = snapshot.unsavedCount > 0 ? t("unsavedBadge", { n: snapshot.unsavedCount }) : "";
+      if (!force && issues === this.lastRenderedIssues) return;
+      this.lastRenderedIssues = issues;
       const visible = this.visibleIssues(issues);
       this.orderedIssueIds = visible.map((i) => i.segmentId);
       this.renderChips(issues);
@@ -2080,7 +2112,7 @@ ${statusChipRules}
         chip.addEventListener("click", () => {
           if (this.activeFilters.has(status)) this.activeFilters.delete(status);
           else this.activeFilters.add(status);
-          this.render(this.scanner.getSnapshot());
+          this.render(this.scanner.getSnapshot(), true);
         });
         this.chipsBox.appendChild(chip);
       }
@@ -2132,7 +2164,7 @@ ${statusChipRules}
       header.addEventListener("click", () => {
         if (this.expandedGroups.has(group.key)) this.expandedGroups.delete(group.key);
         else this.expandedGroups.add(group.key);
-        this.render(this.scanner.getSnapshot());
+        this.render(this.scanner.getSnapshot(), true);
       });
       box.appendChild(header);
       if (this.expandedGroups.has(group.key) || group.issues.length === 1) {
@@ -2559,15 +2591,22 @@ ${statusChipRules}
       layer.setVisible(checked);
       scanner.setPaused(!checked);
     });
+    let lastSyncedIssues = null;
+    let lastShowCosmetic = null;
     scanner.onUpdate((snapshot) => {
-      layer.sync(snapshot.issues, settings.get().showCosmetic);
+      const showCosmetic = settings.get().showCosmetic;
+      if (snapshot.issues !== lastSyncedIssues || showCosmetic !== lastShowCosmetic) {
+        lastSyncedIssues = snapshot.issues;
+        lastShowCosmetic = showCosmetic;
+        layer.sync(snapshot.issues, showCosmetic);
+      }
     });
     const tab = new TabUI(sdk2, scanner, settings);
     await tab.init();
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.1.3"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.1.4"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

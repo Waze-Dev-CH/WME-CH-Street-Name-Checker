@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.4] - 2026-06-12
+
+### Changed
+- WME navigation fluidity: segment evaluation now runs in chunks of 250 with event-loop breathing room instead of one long main-thread task; re-evaluation after an edit is debounced (wme-after-edit fires on every WME edit, each one used to trigger a full synchronous pass); the map layer and the sidebar list only rebuild when results actually change instead of on every fetch progress tick; spatial lookups are skipped for unchecked road types.
+
 ## [1.1.3] - 2026-06-12
 
 ### Changed

@@ -26,8 +26,17 @@ async function main(): Promise<void> {
     scanner.setPaused(!checked);
   });
 
+  // Resync the OpenLayers layer only when results actually change; progress
+  // ticks during a fetch reuse the same issues map and must stay free.
+  let lastSyncedIssues: ReadonlyMap<number, unknown> | null = null;
+  let lastShowCosmetic: boolean | null = null;
   scanner.onUpdate((snapshot) => {
-    layer.sync(snapshot.issues, settings.get().showCosmetic);
+    const showCosmetic = settings.get().showCosmetic;
+    if (snapshot.issues !== lastSyncedIssues || showCosmetic !== lastShowCosmetic) {
+      lastSyncedIssues = snapshot.issues;
+      lastShowCosmetic = showCosmetic;
+      layer.sync(snapshot.issues, showCosmetic);
+    }
   });
 
   const tab = new TabUI(sdk, scanner, settings);

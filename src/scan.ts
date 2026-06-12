@@ -58,8 +58,10 @@ function bboxAreaKm2(bbox: Bbox): number {
 
 export class Scanner {
   private generation = 0;
+  private evalGeneration = 0;
   private controller: AbortController | null = null;
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  private reevalTimer: ReturnType<typeof setTimeout> | undefined;
   private lastIndex: OfficialIndex | null = null;
   private lastSpatialIndex: SpatialIndex | null = null;
   /** Tile keys covered by lastIndex; segments outside are not name-checked. */
@@ -137,14 +139,23 @@ export class Scanner {
     this.publish({ state: "disabled", issues: new Map(), progress: null });
   }
 
-  /** Re-run evaluation against the last fetched official index, without refetching. */
+  /**
+   * Re-run evaluation against the last fetched official index, without
+   * refetching. Debounced: wme-after-edit fires on EVERY WME edit (including
+   * plain node moves) and a full synchronous re-evaluation per edit was the
+   * main source of perceived jank while editing.
+   */
   reevaluate(): void {
-    // wme-after-edit fires for every segment of a batch fix; skip those
-    // intermediate re-evaluations (the fix flow runs one at the end).
+    // skip intermediate re-evaluations during a batch fix (one runs at the end)
     if (isFixInFlight()) return;
-    if (this.paused || !this.settings.get().enabled || !this.lastIndex) return;
-    this.evaluateAll(this.lastIndex);
-    this.publish({ state: "done" });
+    clearTimeout(this.reevalTimer);
+    this.reevalTimer = setTimeout(() => {
+      const index = this.lastIndex;
+      if (isFixInFlight() || this.paused || !this.settings.get().enabled || !index) return;
+      void this.runEvaluation(index).then((completed) => {
+        if (completed) this.publish({ state: "done" });
+      });
+    }, 300);
   }
 
   private async scan(): Promise<void> {
@@ -181,7 +192,8 @@ export class Scanner {
       this.lastIndex = index;
       this.lastSpatialIndex = new SpatialIndex(index.list);
       this.coveredTiles = new Set(tileKeysForBbox(bbox));
-      this.evaluateAll(index);
+      const completed = await this.runEvaluation(index);
+      if (!completed || gen !== this.generation) return;
       this.publish({ state: "done", officialStreetCount: index.streetCount });
     } catch (err) {
       if (controller.signal.aborted || gen !== this.generation) return;
@@ -190,12 +202,26 @@ export class Scanner {
     }
   }
 
-  private evaluateAll(index: OfficialIndex): void {
+  /** Chunk size: keeps every main-thread task short while panning WME. */
+  private static readonly EVAL_CHUNK = 250;
+
+  /**
+   * Evaluate all loaded segments in chunks, yielding to the event loop between
+   * chunks. Returns false when superseded by a newer evaluation.
+   */
+  private async runEvaluation(index: OfficialIndex): Promise<boolean> {
+    const gen = ++this.evalGeneration;
     const settings = this.settings.get();
     const issues = new Map<number, Issue>();
     const stats = { ok: 0, okAlt: 0, skipped: 0, total: 0 };
     const segments = this.sdk.DataModel.Segments.getAll();
-    for (const segment of segments) {
+    const spatial = settings.geometryMatching ? this.lastSpatialIndex : null;
+    for (let i = 0; i < segments.length; i++) {
+      if (i > 0 && i % Scanner.EVAL_CHUNK === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        if (gen !== this.evalGeneration) return false;
+      }
+      const segment = segments[i] as Segment;
       stats.total++;
       // The WME data model loads segments well beyond the viewport; only
       // name-check those inside the area we actually fetched officials for,
@@ -207,9 +233,10 @@ export class Scanner {
       let verdict;
       try {
         const address = this.sdk.DataModel.Segments.getAddress({ segmentId: segment.id });
+        // spatial lookup only for road types we actually check
         const nearest =
-          settings.geometryMatching && this.lastSpatialIndex
-            ? nearestOfficial(segment.geometry, this.lastSpatialIndex)
+          spatial && settings.checkedRoadTypes.includes(segment.roadType)
+            ? nearestOfficial(segment.geometry, spatial)
             : null;
         verdict = evaluateSegment(segment, address, index, settings, nearest);
       } catch {
@@ -245,6 +272,7 @@ export class Scanner {
       }
     }
     this.publish({ issues, stats, unsavedCount: this.safeUnsavedCount() });
+    return true;
   }
 
   private isCovered(segment: Segment): boolean {

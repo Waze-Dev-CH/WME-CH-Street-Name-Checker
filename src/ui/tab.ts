@@ -105,6 +105,8 @@ export class TabUI {
   private groupsBox!: HTMLElement;
   private activeFilters = new Set<IssueStatus>();
   private expandedGroups = new Set<string>();
+  /** Last issues map rendered into chips/groups, to skip redundant DOM rebuilds. */
+  private lastRenderedIssues: ReadonlyMap<number, Issue> | null = null;
   private selectedSegmentIds = new Set<number>();
   private orderedIssueIds: number[] = [];
   private nextIssuePointer = -1;
@@ -133,6 +135,7 @@ export class TabUI {
   private rebuild(): void {
     this.pane.replaceChildren();
     this.buildSkeleton();
+    this.lastRenderedIssues = null;
     this.render(this.scanner.getSnapshot());
   }
 
@@ -219,7 +222,7 @@ export class TabUI {
     return details;
   }
 
-  private render(snapshot: ScanSnapshot): void {
+  private render(snapshot: ScanSnapshot, force = false): void {
     const { state, issues, stats, officialStreetCount, progress, error } = snapshot;
 
     let statusText = t(STATE_KEYS[state]);
@@ -237,6 +240,11 @@ export class TabUI {
 
     this.unsavedBadge.textContent =
       snapshot.unsavedCount > 0 ? t("unsavedBadge", { n: snapshot.unsavedCount }) : "";
+
+    // Progress ticks reuse the same issues map: only the status line above
+    // changes, skip the expensive chips/groups DOM rebuild.
+    if (!force && issues === this.lastRenderedIssues) return;
+    this.lastRenderedIssues = issues;
 
     const visible = this.visibleIssues(issues);
     this.orderedIssueIds = visible.map((i) => i.segmentId);
@@ -270,7 +278,7 @@ export class TabUI {
       chip.addEventListener("click", () => {
         if (this.activeFilters.has(status)) this.activeFilters.delete(status);
         else this.activeFilters.add(status);
-        this.render(this.scanner.getSnapshot());
+        this.render(this.scanner.getSnapshot(), true);
       });
       this.chipsBox.appendChild(chip);
     }
@@ -328,7 +336,7 @@ export class TabUI {
     header.addEventListener("click", () => {
       if (this.expandedGroups.has(group.key)) this.expandedGroups.delete(group.key);
       else this.expandedGroups.add(group.key);
-      this.render(this.scanner.getSnapshot());
+      this.render(this.scanner.getSnapshot(), true);
     });
     box.appendChild(header);
 
