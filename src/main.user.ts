@@ -1,4 +1,5 @@
 import { TileFetcher } from "./geoadmin/tiles";
+import { resolveLocale, setLocale } from "./i18n";
 import { log } from "./log";
 import { HighlightLayer, registerLayerCheckbox } from "./map-layer";
 import { Scanner } from "./scan";
@@ -11,6 +12,7 @@ async function main(): Promise<void> {
   await sdk.Events.once({ eventName: "wme-ready" });
 
   const settings = new SettingsStore();
+  setLocale(resolveLocale(settings.get().language, sdk.Settings.getLocale().localeCode));
   const fetcher = new TileFetcher();
   const scanner = new Scanner(sdk, fetcher, settings);
   const layer = new HighlightLayer(sdk, settings);

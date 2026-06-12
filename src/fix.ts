@@ -6,10 +6,20 @@ import type { Settings } from "./settings";
 export const GROUP_FIX_CAP = 25;
 export const GROUP_FIX_CONFIRM_THRESHOLD = 5;
 
+/** Error codes double as i18n string keys (see src/i18n.ts). */
+export type FixErrorCode =
+  | "errNotFixable"
+  | "errEditingNotAllowed"
+  | "errSegmentUnloaded"
+  | "errNoCity"
+  | "errStreetCreate";
+
 export interface FixOutcome {
   segmentId: number;
   ok: boolean;
-  error?: string;
+  errorCode?: FixErrorCode;
+  /** Raw message for unexpected SDK errors (not localized). */
+  errorDetail?: string;
 }
 
 /**
@@ -19,17 +29,17 @@ export interface FixOutcome {
  */
 export function fixSegment(sdk: WmeSDK, issue: Issue, settings: Settings): FixOutcome {
   const segmentId = issue.segmentId;
-  const fail = (error: string): FixOutcome => ({ segmentId, ok: false, error });
+  const fail = (errorCode: FixErrorCode): FixOutcome => ({ segmentId, ok: false, errorCode });
 
-  if (!issue.fixable || !issue.suggestion) return fail("Not fixable");
-  if (!sdk.Editing.isEditingAllowed()) return fail("Editing is not allowed here");
+  if (!issue.fixable || !issue.suggestion) return fail("errNotFixable");
+  if (!sdk.Editing.isEditingAllowed()) return fail("errEditingNotAllowed");
 
   try {
     const segment = sdk.DataModel.Segments.getById({ segmentId });
-    if (!segment) return fail("Segment no longer loaded");
+    if (!segment) return fail("errSegmentUnloaded");
     const address = sdk.DataModel.Segments.getAddress({ segmentId });
     const cityId = address.city?.id;
-    if (cityId == null) return fail("Segment has no city; set the city first");
+    if (cityId == null) return fail("errNoCity");
 
     let street = sdk.DataModel.Streets.getStreet({ streetName: issue.suggestion, cityId });
     if (!street) {
@@ -39,7 +49,7 @@ export function fixSegment(sdk: WmeSDK, issue: Issue, settings: Settings): FixOu
         street = sdk.DataModel.Streets.getStreet({ streetName: issue.suggestion, cityId });
       }
     }
-    if (!street) return fail("Could not find or create the street record");
+    if (!street) return fail("errStreetCreate");
 
     // Alternates must be passed back explicitly so they are preserved.
     const alternateStreetIds = [...segment.alternateStreetIds];
@@ -61,7 +71,11 @@ export function fixSegment(sdk: WmeSDK, issue: Issue, settings: Settings): FixOu
     return { segmentId, ok: true };
   } catch (err) {
     log.error(`Fix failed for segment ${segmentId}`, err);
-    return fail(err instanceof Error ? err.message : String(err));
+    return {
+      segmentId,
+      ok: false,
+      errorDetail: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 

@@ -12,14 +12,23 @@ export type IssueStatus =
   | "NOT_FOUND"
   | "UNNAMED";
 
+/** Structured qualifiers, localized at display time by the UI. */
+export interface IssueNote {
+  unofficial?: boolean;
+  planned?: boolean;
+  /** Full bilingual label when the suggestion is one side of an "A/B" label. */
+  fullLabel?: string;
+  /** zip_label of the locality where the name actually exists (WRONG_CITY). */
+  existsIn?: string;
+}
+
 export interface Issue {
   segmentId: number;
   status: IssueStatus;
   currentName: string | null;
   /** Official name to apply on fix; null when there is nothing to suggest. */
   suggestion: string | null;
-  /** Qualifier shown next to the suggestion: planned / unofficial / full bilingual label. */
-  suggestionNote: string | null;
+  note: IssueNote | null;
   cityId: number | null;
   cityName: string | null;
   roadType: number;
@@ -34,15 +43,15 @@ export type Verdict =
   | { kind: "skipped" }
   | { kind: "issue"; issue: Issue };
 
-function suggestionNoteFor(entry: IndexedEntry): string | null {
-  const notes: string[] = [];
-  if (!entry.street.official) notes.push("unofficial");
+function noteFor(entry: IndexedEntry): IssueNote | null {
+  const note: IssueNote = {};
+  if (!entry.street.official) note.unofficial = true;
   const status = entry.street.status.toLowerCase();
   if (status !== "" && status !== "bestehend" && status !== "real" && status !== "existing") {
-    notes.push("planned");
+    note.planned = true;
   }
-  if (entry.isSlashPart) notes.push(`full label: ${entry.street.label}`);
-  return notes.length > 0 ? notes.join(", ") : null;
+  if (entry.isSlashPart) note.fullLabel = entry.street.label;
+  return Object.keys(note).length > 0 ? note : null;
 }
 
 export function evaluateSegment(
@@ -73,7 +82,7 @@ export function evaluateSegment(
         ...baseIssue,
         status: "UNNAMED",
         suggestion: null,
-        suggestionNote: null,
+        note: null,
         fixable: false,
       },
     };
@@ -92,7 +101,7 @@ export function evaluateSegment(
             ...baseIssue,
             status: "WRONG_CITY",
             suggestion: null,
-            suggestionNote: `exists in: ${match.entry.street.zipLabel}`,
+            note: { existsIn: match.entry.street.zipLabel },
             fixable: false,
           },
         };
@@ -106,7 +115,7 @@ export function evaluateSegment(
         ...baseIssue,
         status: statusByLevel[match.level],
         suggestion: match.entry.namePart,
-        suggestionNote: suggestionNoteFor(match.entry),
+        note: noteFor(match.entry),
         fixable: true,
       },
     };
@@ -129,7 +138,7 @@ export function evaluateSegment(
       ...baseIssue,
       status: "NOT_FOUND",
       suggestion: null,
-      suggestionNote: null,
+      note: null,
       fixable: false,
     },
   };

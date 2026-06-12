@@ -1,31 +1,34 @@
 import type { WmeSDK } from "wme-sdk-typings";
-import { fixGroup, fixSegment, GROUP_FIX_CAP, GROUP_FIX_CONFIRM_THRESHOLD } from "../fix";
+import { fixGroup, fixSegment, GROUP_FIX_CAP, GROUP_FIX_CONFIRM_THRESHOLD, type FixOutcome } from "../fix";
+import { LANGUAGE_CHOICES, resolveLocale, setLocale, t, type LanguagePreference, type StringKey } from "../i18n";
 import { STATUS_STYLES } from "../map-layer";
-import type { Issue, IssueStatus } from "../matching/evaluate";
+import type { Issue, IssueNote, IssueStatus } from "../matching/evaluate";
 import type { ScanSnapshot, Scanner } from "../scan";
 import { ROAD_TYPE_OPTIONS, type CityScoping, type Settings, type SettingsStore } from "../settings";
 import { injectStyles } from "./styles";
 
+// Road type names stay in English on purpose: they are the WME community's
+// shared vocabulary and Waze's own localized terms vary by UI version.
 const ROAD_TYPE_LABELS = new Map(ROAD_TYPE_OPTIONS.map((r) => [r.id, r.label]));
 
-const STATUS_LEGEND: Record<IssueStatus, string> = {
-  COSMETIC: "typography only (case, apostrophe, spacing) — dashed line",
-  VARIANT: "abbreviation or missing accent; official spelling suggested",
-  NEAR: "probable typo; one close official name found",
-  WRONG_CITY: "name exists, but in another locality (city scoping)",
-  NOT_FOUND: "not found in the official register",
-  UNNAMED: "checked road type without a street name — dashed line",
+const LEGEND_KEYS: Record<IssueStatus, StringKey> = {
+  COSMETIC: "legendCOSMETIC",
+  VARIANT: "legendVARIANT",
+  NEAR: "legendNEAR",
+  WRONG_CITY: "legendWRONG_CITY",
+  NOT_FOUND: "legendNOT_FOUND",
+  UNNAMED: "legendUNNAMED",
 };
 
-const STATE_TEXT: Record<ScanSnapshot["state"], string> = {
-  idle: "Idle",
-  "zoom-gated": "Zoom in to scan",
-  "area-gated": "View too large to scan",
-  fetching: "Fetching official register…",
-  evaluating: "Comparing names…",
-  done: "Scan done",
-  paused: "Paused (layer unchecked)",
-  error: "Scan failed",
+const STATE_KEYS: Record<ScanSnapshot["state"], StringKey> = {
+  idle: "stateIdle",
+  "zoom-gated": "stateZoomGated",
+  "area-gated": "stateAreaGated",
+  fetching: "stateFetching",
+  evaluating: "stateEvaluating",
+  done: "stateDone",
+  paused: "statePaused",
+  error: "stateError",
 };
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -39,12 +42,27 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+function formatNote(note: IssueNote | null): string {
+  if (!note) return "";
+  const parts: string[] = [];
+  if (note.unofficial) parts.push(t("noteUnofficial"));
+  if (note.planned) parts.push(t("notePlanned"));
+  if (note.fullLabel) parts.push(t("noteFullLabel", { label: note.fullLabel }));
+  if (note.existsIn) parts.push(t("noteExistsIn", { place: note.existsIn }));
+  return parts.join(", ");
+}
+
+function formatFixError(outcome: FixOutcome): string {
+  if (outcome.errorCode) return t(outcome.errorCode);
+  return outcome.errorDetail ?? "?";
+}
+
 interface IssueGroup {
   key: string;
   status: IssueStatus;
   currentName: string | null;
   suggestion: string | null;
-  suggestionNote: string | null;
+  note: IssueNote | null;
   fixable: boolean;
   issues: Issue[];
 }
@@ -60,7 +78,7 @@ function groupIssues(issues: Iterable<Issue>): IssueGroup[] {
         status: issue.status,
         currentName: issue.currentName,
         suggestion: issue.suggestion,
-        suggestionNote: issue.suggestionNote,
+        note: issue.note,
         fixable: issue.fixable,
         issues: [],
       };
@@ -103,17 +121,24 @@ export class TabUI {
     this.render(this.scanner.getSnapshot());
   }
 
+  /** Rebuild all static DOM (after a language change). */
+  private rebuild(): void {
+    this.pane.replaceChildren();
+    this.buildSkeleton();
+    this.render(this.scanner.getSnapshot());
+  }
+
   private buildSkeleton(): void {
     this.pane.classList.add("chk-pane");
 
     const header = el("div", "chk-header");
-    this.statusLine = el("span", "chk-status-line", "Idle");
+    this.statusLine = el("span", "chk-status-line", t("stateIdle"));
     this.unsavedBadge = el("span", "chk-unsaved", "");
-    const rescanBtn = el("button", "", "Rescan");
-    rescanBtn.title = "Clear the cache and fetch the official register again";
+    const rescanBtn = el("button", "", t("rescan"));
+    rescanBtn.title = t("rescanTitle");
     rescanBtn.addEventListener("click", () => this.scanner.rescan());
-    const nextBtn = el("button", "", "Next issue");
-    nextBtn.title = "Select the next mismatching segment";
+    const nextBtn = el("button", "", t("nextIssue"));
+    nextBtn.title = t("nextIssueTitle");
     nextBtn.addEventListener("click", () => this.selectNextIssue());
     header.append(this.statusLine, this.unsavedBadge, rescanBtn, nextBtn);
 
@@ -125,12 +150,12 @@ export class TabUI {
 
   private buildLegend(): HTMLElement {
     const details = el("details", "chk-settings");
-    details.appendChild(el("summary", "", "Legend"));
+    details.appendChild(el("summary", "", t("legendTitle")));
     for (const status of Object.keys(STATUS_STYLES) as IssueStatus[]) {
       const row = el("div", "chk-settings-row");
       const dot = el("span", "chk-dot");
       dot.style.background = STATUS_STYLES[status].strokeColor;
-      row.append(dot, el("span", "", `${status}: ${STATUS_LEGEND[status]}`));
+      row.append(dot, el("span", "", `${status}: ${t(LEGEND_KEYS[status])}`));
       details.appendChild(row);
     }
     return details;
@@ -139,17 +164,21 @@ export class TabUI {
   private render(snapshot: ScanSnapshot): void {
     const { state, issues, stats, officialStreetCount, progress, error } = snapshot;
 
-    let statusText = STATE_TEXT[state];
+    let statusText = t(STATE_KEYS[state]);
     if (state === "fetching" && progress) statusText += ` ${progress.done}/${progress.total}`;
     if (state === "done") {
-      statusText = `${issues.size} issue${issues.size === 1 ? "" : "s"} · ${stats.ok + stats.okAlt} OK · ${officialStreetCount} official streets`;
+      statusText = t("stateDone", {
+        issues: issues.size,
+        ok: stats.ok + stats.okAlt,
+        streets: officialStreetCount,
+      });
     }
     if (state === "error" && error) statusText += `: ${error}`;
     this.statusLine.textContent = statusText;
     this.statusLine.classList.toggle("chk-error", state === "error");
 
     this.unsavedBadge.textContent =
-      snapshot.unsavedCount > 0 ? `${snapshot.unsavedCount} unsaved` : "";
+      snapshot.unsavedCount > 0 ? t("unsavedBadge", { n: snapshot.unsavedCount }) : "";
 
     const visible = this.visibleIssues(issues);
     this.orderedIssueIds = visible.map((i) => i.segmentId);
@@ -179,7 +208,7 @@ export class TabUI {
       const dot = el("span", "chk-dot");
       dot.style.background = STATUS_STYLES[status].strokeColor;
       chip.append(dot, `${status} ${count}`);
-      chip.title = "Filter the list by this status";
+      chip.title = t("filterChipTitle");
       chip.addEventListener("click", () => {
         if (this.activeFilters.has(status)) this.activeFilters.delete(status);
         else this.activeFilters.add(status);
@@ -193,9 +222,9 @@ export class TabUI {
     this.groupsBox.replaceChildren();
     if (visible.length === 0) {
       if (state === "done") {
-        this.groupsBox.appendChild(el("div", "chk-empty", "All street names match ✓"));
+        this.groupsBox.appendChild(el("div", "chk-empty", t("allMatch")));
       } else if (state === "zoom-gated" || state === "area-gated") {
-        this.groupsBox.appendChild(el("div", "chk-muted", STATE_TEXT[state]));
+        this.groupsBox.appendChild(el("div", "chk-muted", t(STATE_KEYS[state])));
       }
       return;
     }
@@ -210,16 +239,17 @@ export class TabUI {
     const badge = el("span", `chk-badge chk-badge-${group.status}`);
     badge.title = group.status;
 
+    const noteText = formatNote(group.note);
     const names = el("span", "chk-group-names");
-    names.appendChild(el("span", "", group.currentName ?? "(unnamed)"));
+    names.appendChild(el("span", "", group.currentName ?? t("unnamed")));
     if (group.suggestion && group.suggestion !== group.currentName) {
       names.appendChild(el("span", "chk-arrow", "  →  "));
       names.appendChild(el("span", "chk-suggestion", group.suggestion));
     }
-    if (group.suggestionNote) {
-      names.appendChild(el("span", "chk-note", ` (${group.suggestionNote})`));
+    if (noteText) {
+      names.appendChild(el("span", "chk-note", ` (${noteText})`));
     }
-    names.title = `${group.status}${group.suggestionNote ? ` — ${group.suggestionNote}` : ""}`;
+    names.title = `${group.status}${noteText ? ` — ${noteText}` : ""}`;
 
     const count = el("span", "chk-count", `×${group.issues.length}`);
     header.append(badge, names, count);
@@ -228,7 +258,7 @@ export class TabUI {
       const fixAllBtn = el(
         "button",
         "chk-fix-all",
-        `Fix all (${Math.min(group.issues.length, GROUP_FIX_CAP)})`,
+        t("fixAll", { n: Math.min(group.issues.length, GROUP_FIX_CAP) }),
       );
       fixAllBtn.addEventListener("click", (ev) => {
         ev.stopPropagation();
@@ -265,8 +295,8 @@ export class TabUI {
     );
     row.appendChild(meta);
     if (issue.fixable) {
-      const fixBtn = el("button", "chk-fix-all", "Fix");
-      fixBtn.title = `Apply "${issue.suggestion}"`;
+      const fixBtn = el("button", "chk-fix-all", t("fix"));
+      fixBtn.title = t("fixTitle", { name: issue.suggestion ?? "" });
       fixBtn.addEventListener("click", (ev) => {
         ev.stopPropagation();
         this.onFixOne(issue);
@@ -313,7 +343,7 @@ export class TabUI {
   private onFixOne(issue: Issue): void {
     const outcome = fixSegment(this.sdk, issue, this.settings.get());
     if (!outcome.ok) {
-      alert(`Fix failed: ${outcome.error}`);
+      alert(t("fixFailed", { error: formatFixError(outcome) }));
       return;
     }
     this.scanner.reevaluate();
@@ -323,9 +353,7 @@ export class TabUI {
     const n = Math.min(group.issues.length, GROUP_FIX_CAP);
     if (
       n > GROUP_FIX_CONFIRM_THRESHOLD &&
-      !confirm(
-        `Apply "${group.suggestion}" to ${n} segments?\nNothing is saved automatically; review and save in WME.`,
-      )
+      !confirm(t("confirmGroupFix", { name: group.suggestion ?? "", n }))
     ) {
       return;
     }
@@ -333,7 +361,12 @@ export class TabUI {
     const failed = outcomes.find((o) => !o.ok);
     if (failed) {
       alert(
-        `Fixed ${outcomes.filter((o) => o.ok).length}/${n}, then stopped: ${failed.error} (segment ${failed.segmentId})`,
+        t("fixStopped", {
+          done: outcomes.filter((o) => o.ok).length,
+          total: n,
+          error: formatFixError(failed),
+          id: failed.segmentId,
+        }),
       );
     }
     this.scanner.reevaluate();
@@ -341,7 +374,7 @@ export class TabUI {
 
   private buildSettings(): HTMLElement {
     const details = el("details", "chk-settings");
-    details.appendChild(el("summary", "", "Settings"));
+    details.appendChild(el("summary", "", t("settingsTitle")));
     const settings = this.settings.get();
 
     const apply = (partial: Partial<Settings>, rescan = false): void => {
@@ -365,64 +398,55 @@ export class TabUI {
       label.append(cb, option.label);
       grid.appendChild(label);
     }
-    details.appendChild(el("div", "", "Checked road types:"));
+    details.appendChild(el("div", "", t("roadTypesLabel")));
     details.appendChild(grid);
 
     const toggle = (
-      text: string,
+      textKey: StringKey,
       key: keyof Pick<
         Settings,
         "altNameCountsAsOk" | "showCosmetic" | "showMapLabels" | "keepOldNameAsAlt"
       >,
-      title?: string,
+      titleKey?: StringKey,
     ): HTMLElement => {
       const label = el("label");
-      if (title) label.title = title;
+      if (titleKey) label.title = t(titleKey);
       const cb = el("input") as HTMLInputElement;
       cb.type = "checkbox";
       cb.checked = settings[key];
       cb.addEventListener("change", () => apply({ [key]: cb.checked }));
-      label.append(cb, text);
+      label.append(cb, t(textKey));
       const row = el("div", "chk-settings-row");
       row.appendChild(label);
       return row;
     };
 
-    details.appendChild(
-      toggle(
-        "Alternate name match counts as OK",
-        "altNameCountsAsOk",
-        "Useful in bilingual communes where the second language is an alternate name",
-      ),
-    );
-    details.appendChild(toggle("Show cosmetic differences", "showCosmetic"));
-    details.appendChild(toggle("Show expected name on the map (zoom ≥ 17)", "showMapLabels"));
-    details.appendChild(
-      toggle(
-        "Keep old name as alternate when fixing",
-        "keepOldNameAsAlt",
-        "Never applied to typo (NEAR) fixes",
-      ),
-    );
+    details.appendChild(toggle("altOk", "altNameCountsAsOk", "altOkTitle"));
+    details.appendChild(toggle("showCosmetic", "showCosmetic"));
+    details.appendChild(toggle("showMapLabels", "showMapLabels"));
+    details.appendChild(toggle("keepOldName", "keepOldNameAsAlt", "keepOldNameTitle"));
 
     const scopingRow = el("div", "chk-settings-row");
-    scopingRow.appendChild(el("span", "", "City scoping:"));
+    scopingRow.appendChild(el("span", "", t("scopingLabel")));
     const select = el("select") as HTMLSelectElement;
+    const scopingLabels: Record<CityScoping, string> = {
+      off: t("scopingOff"),
+      warn: t("scopingWarn"),
+      strict: t("scopingStrict"),
+    };
     for (const value of ["off", "warn", "strict"] as CityScoping[]) {
-      const opt = el("option", "", value) as HTMLOptionElement;
+      const opt = el("option", "", scopingLabels[value]) as HTMLOptionElement;
       opt.value = value;
       select.appendChild(opt);
     }
     select.value = settings.cityScoping;
-    select.title = "Compare the segment's city with the official locality (zip_label)";
-    select.addEventListener("change", () =>
-      apply({ cityScoping: select.value as CityScoping }),
-    );
+    select.title = t("scopingTitle");
+    select.addEventListener("change", () => apply({ cityScoping: select.value as CityScoping }));
     scopingRow.appendChild(select);
     details.appendChild(scopingRow);
 
     const zoomRow = el("div", "chk-settings-row");
-    zoomRow.appendChild(el("span", "", "Min zoom to scan:"));
+    zoomRow.appendChild(el("span", "", t("minZoomLabel")));
     const zoomInput = el("input") as HTMLInputElement;
     zoomInput.type = "number";
     zoomInput.min = "12";
@@ -434,6 +458,28 @@ export class TabUI {
     });
     zoomRow.appendChild(zoomInput);
     details.appendChild(zoomRow);
+
+    const langRow = el("div", "chk-settings-row");
+    langRow.appendChild(el("span", "", t("languageLabel")));
+    const langSelect = el("select") as HTMLSelectElement;
+    for (const choice of LANGUAGE_CHOICES) {
+      const opt = el(
+        "option",
+        "",
+        choice.value === "auto" ? t("languageAuto") : choice.label,
+      ) as HTMLOptionElement;
+      opt.value = choice.value;
+      langSelect.appendChild(opt);
+    }
+    langSelect.value = settings.language;
+    langSelect.addEventListener("change", () => {
+      const language = langSelect.value as LanguagePreference;
+      this.settings.update({ language });
+      setLocale(resolveLocale(language, this.sdk.Settings.getLocale().localeCode));
+      this.rebuild();
+    });
+    langRow.appendChild(langSelect);
+    details.appendChild(langRow);
 
     return details;
   }

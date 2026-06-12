@@ -1,3 +1,4 @@
+import type { LanguagePreference } from "./i18n";
 import { log } from "./log";
 
 // Road type ids from the WME SDK ROAD_TYPE constant (values verified against
@@ -39,6 +40,7 @@ export interface Settings {
   cityScoping: CityScoping;
   showMapLabels: boolean;
   keepOldNameAsAlt: boolean;
+  language: LanguagePreference;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -50,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   cityScoping: "off",
   showMapLabels: true,
   keepOldNameAsAlt: false,
+  language: "auto",
 };
 
 const STORAGE_KEY = "wme-ch-name-check.settings";
