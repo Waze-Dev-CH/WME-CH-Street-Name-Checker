@@ -37,11 +37,11 @@ Compare les noms de rues des segments visibles avec le **répertoire officiel de
 | `COSMETIC` | Différence typographique (apostrophe, casse, espaces) | jaune pointillé |
 | `VARIANT` | Abréviation, accent ou article manquant (Av. → Avenue, Chemin de Montaz → Chemin de la Montaz) | jaune |
 | `NEAR` | Probable faute de frappe, suggestion unique | orange |
-| `WRONG_TYPE` | Type de voie différent (Chemin de la Guérite → Route de la Guérite), radical unique dans le secteur | orange foncé pointillé |
+| `WRONG_TYPE` | Type de voie différent ou manquant (Chemin → Route, La Palaz A → Zone Industrielle La Palaz A), radical unique dans le secteur | orange foncé pointillé |
 | `WRONG_STREET` | Nom valide, mais la rue officielle sous le segment porte un autre nom | rouge foncé |
 | `WRONG_CITY` | Le nom existe, mais dans une autre localité (mode scoping) | rose |
 | `NOT_FOUND` | Introuvable dans le répertoire officiel | rouge |
-| `UNNAMED` | Segment vérifiable sans nom | violet pointillé |
+| `UNNAMED` | Segment vérifiable sans nom; la rue officielle dessous est proposée en 1 clic | violet pointillé |
 | `MICRO_SEGMENT` | Segment carrossable < 5 m (ronds-points exclus) | cyan |
 | `LOOP` | Boucle de moins de 3 segments (nœuds d'extrémité identiques) | brun |
 | `NARROW_MISUSE` | Rue étroite à sens unique ou < 50 m | indigo pointillé |
@@ -82,11 +82,11 @@ Vergleicht die Strassennamen der sichtbaren Segmente mit dem **amtlichen Strasse
 | `COSMETIC` | Nur Typografie (Apostroph, Gross-/Kleinschreibung, Leerzeichen) | gelb gestrichelt |
 | `VARIANT` | Abkürzung, fehlender Akzent oder Artikel (Bahnhofstr. → Bahnhofstrasse) | gelb |
 | `NEAR` | Wahrscheinlicher Tippfehler, eindeutiger Vorschlag | orange |
-| `WRONG_TYPE` | Anderer Strassentyp (Bahnhofweg → Bahnhofstrasse), eindeutiger Namensstamm in der Umgebung | dunkelorange gestrichelt |
+| `WRONG_TYPE` | Anderer oder fehlender Strassentyp (Bahnhofweg → Bahnhofstrasse, X → Strasse X), eindeutiger Namensstamm in der Umgebung | dunkelorange gestrichelt |
 | `WRONG_STREET` | Gültiger Name, aber die amtliche Strasse unter dem Segment heisst anders | dunkelrot |
 | `WRONG_CITY` | Name existiert, aber in anderer Ortschaft (Scoping-Modus) | rosa |
 | `NOT_FOUND` | Nicht im amtlichen Verzeichnis | rot |
-| `UNNAMED` | Geprüfter Strassentyp ohne Namen | violett gestrichelt |
+| `UNNAMED` | Geprüfter Strassentyp ohne Namen; die amtliche Strasse darunter wird mit 1 Klick vorgeschlagen | violett gestrichelt |
 | `MICRO_SEGMENT` | Befahrbares Segment < 5 m (Kreisel ausgenommen) | cyan |
 | `LOOP` | Schleife aus weniger als 3 Segmenten (gleiche Endknoten) | braun |
 | `NARROW_MISUSE` | Enge Strasse als Einbahn oder < 50 m | indigo gestrichelt |
@@ -127,11 +127,11 @@ Confronta i nomi delle strade dei segmenti visibili con il **repertorio ufficial
 | `COSMETIC` | Solo tipografia (apostrofo, maiuscole, spazi) | giallo tratteggiato |
 | `VARIANT` | Abbreviazione, accento o articolo mancante | giallo |
 | `NEAR` | Probabile errore di battitura, proposta unica | arancione |
-| `WRONG_TYPE` | Tipo di via diverso (Chemin → Route), radice unica nella zona | arancione scuro tratteggiato |
+| `WRONG_TYPE` | Tipo di via diverso o mancante (Chemin → Route, X → Via X), radice unica nella zona | arancione scuro tratteggiato |
 | `WRONG_STREET` | Nome valido, ma la strada ufficiale sotto il segmento ha un altro nome | rosso scuro |
 | `WRONG_CITY` | Il nome esiste, ma in un'altra località (scoping) | rosa |
 | `NOT_FOUND` | Assente dal repertorio ufficiale | rosso |
-| `UNNAMED` | Tipo verificato senza nome | viola tratteggiato |
+| `UNNAMED` | Tipo verificato senza nome; la strada ufficiale sottostante è proposta in 1 clic | viola tratteggiato |
 | `MICRO_SEGMENT` | Segmento percorribile < 5 m (rotatorie escluse) | ciano |
 | `LOOP` | Anello con meno di 3 segmenti (stessi nodi) | marrone |
 | `NARROW_MISUSE` | Strada stretta a senso unico o < 50 m | indaco tratteggiato |
@@ -172,11 +172,11 @@ Compares the street names of visible segments with the Swiss federal **official 
 | `COSMETIC` | Typography only (apostrophe, case, spacing) | dashed yellow |
 | `VARIANT` | Abbreviation, missing accent or article | yellow |
 | `NEAR` | Probable typo, unique suggestion | orange |
-| `WRONG_TYPE` | Different way type (Chemin de la Guérite → Route de la Guérite), unique stem in the area | dashed dark orange |
+| `WRONG_TYPE` | Different or missing way type (Chemin → Route, La Palaz A → Zone Industrielle La Palaz A), unique stem in the area | dashed dark orange |
 | `WRONG_STREET` | Valid name, but the official street under the segment has another name | dark red |
 | `WRONG_CITY` | Name exists, but in another locality (scoping mode) | pink |
 | `NOT_FOUND` | Not in the official register | red |
-| `UNNAMED` | Checked road type without a name | dashed violet |
+| `UNNAMED` | Checked road type without a name; the official street underneath is suggested in one click | dashed violet |
 | `MICRO_SEGMENT` | Drivable segment < 5 m (roundabouts excluded) | cyan |
 | `LOOP` | Loop made of fewer than 3 segments (same endpoints) | brown |
 | `NARROW_MISUSE` | Narrow Street one-way or < 50 m | dashed indigo |
