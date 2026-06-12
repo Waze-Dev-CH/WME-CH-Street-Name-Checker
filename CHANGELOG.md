@@ -3,6 +3,14 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.8.0] - 2026-06-12
+
+### Added
+- Master toggles at the top of the sidebar tab: "Enabled" (disables scanning, the map layer and the edit-panel box entirely, persisted) and "Auto scan" (off = scan only via the Rescan button).
+
+### Fixed
+- The edit-panel box now disappears when the layer checkbox is unchecked, instead of showing stale results.
+
 ## [0.7.0] - 2026-06-12
 
 ### Added

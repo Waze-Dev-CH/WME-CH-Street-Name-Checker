@@ -13,6 +13,7 @@ const MAX_AREA_KM2 = 6;
 
 export type ScanState =
   | "idle"
+  | "disabled"
   | "zoom-gated"
   | "area-gated"
   | "fetching"
@@ -79,7 +80,11 @@ export class Scanner {
   ) {}
 
   start(): void {
-    const onMove = () => this.requestScan();
+    const onMove = () => {
+      const s = this.settings.get();
+      if (!s.enabled || !s.autoScan) return;
+      this.requestScan();
+    };
     this.sdk.Events.on({ eventName: "wme-map-move-end", eventHandler: onMove });
     this.sdk.Events.on({ eventName: "wme-map-data-loaded", eventHandler: onMove });
     this.sdk.Events.on({ eventName: "wme-after-edit", eventHandler: () => this.reevaluate() });
@@ -121,15 +126,26 @@ export class Scanner {
     this.requestScan();
   }
 
+  /** Disable everything: abort, clear results, publish the disabled state. */
+  disable(): void {
+    this.controller?.abort();
+    clearTimeout(this.debounceTimer);
+    this.publish({ state: "disabled", issues: new Map(), progress: null });
+  }
+
   /** Re-run evaluation against the last fetched official index, without refetching. */
   reevaluate(): void {
-    if (this.paused || !this.lastIndex) return;
+    if (this.paused || !this.settings.get().enabled || !this.lastIndex) return;
     this.evaluateAll(this.lastIndex);
     this.publish({ state: "done" });
   }
 
   private async scan(): Promise<void> {
     if (this.paused) return;
+    if (!this.settings.get().enabled) {
+      this.disable();
+      return;
+    }
     const gen = ++this.generation;
     this.controller?.abort();
     const controller = new AbortController();

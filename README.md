@@ -17,6 +17,7 @@ Compare les noms de rues des segments visibles avec le **répertoire officiel de
 - Surlignage des segments sur la carte, couleur par statut (tableau ci-dessous).
 - Onglet latéral **CH Names**: compteurs filtrables, liste groupée par `nom actuel → nom officiel`, clic = sélection du segment, bouton ⌖ = centrer la carte, bouton "Écart suivant".
 - Encadré dans le panneau d'édition: à la sélection d'un segment, verdict du scan (statut, explication, suggestion) avec boutons Corriger / Tout corriger (désactivable).
+- Interrupteurs en tête d'onglet: "Actif" (coupe tout: scan, couche, encadré) et "Scan auto" (désactivé = scan manuel via Rescanner). Décocher la couche masque aussi l'encadré.
 - Correction 1-clic par segment ou par groupe (cap 25, confirmation au-delà de 5). **Rien n'est sauvegardé automatiquement**: les modifications entrent dans la pile d'édition WME, tu relis et sauves toi-même (Ctrl+S, undo natif).
 - Communes bilingues (Biel/Bienne…): les libellés officiels `A/B` sont acceptés en entier et pour chaque partie; un nom alternatif Waze qui correspond compte comme OK (réglable).
 - Contrôles des règles d'édition de Suisse romande (sans donnée externe, désactivables): micro-segments, boucles à 1-2 segments, mauvais usage du type Rue étroite. Statuts informatifs, sans correction automatique.
@@ -57,6 +58,7 @@ Vergleicht die Strassennamen der sichtbaren Segmente mit dem **amtlichen Strasse
 - Farbliche Hervorhebung der Segmente auf der Karte, Farbe je Status (Tabelle unten).
 - Seitentab **CH Names**: filterbare Zähler, gruppierte Liste `aktueller Name → amtlicher Name`, Klick = Segment auswählen, ⌖ = Karte zentrieren, "Nächste Abweichung".
 - Box im Bearbeitungspanel: bei Auswahl eines Segments erscheint das Scan-Ergebnis (Status, Erklärung, Vorschlag) mit Korrigieren / Alle korrigieren (abschaltbar).
+- Hauptschalter oben im Tab: "Aktiv" (deaktiviert alles) und "Auto-Scan" (aus = nur manuell per Neu scannen). Eine deaktivierte Ebene blendet auch die Box aus.
 - 1-Klick-Korrektur pro Segment oder Gruppe (max. 25, Bestätigung ab 5). **Nichts wird automatisch gespeichert**: Änderungen landen im WME-Bearbeitungsstapel — prüfen und selbst speichern (Ctrl+S, natives Undo).
 - Zweisprachige Gemeinden (Biel/Bienne…): amtliche `A/B`-Bezeichnungen werden als Ganzes und je Teil akzeptiert; ein passender Alternativname zählt als OK (einstellbar).
 - Schweizer Regelprüfungen (ohne externe Daten, abschaltbar): Mikrosegmente, Schleifen aus 1-2 Segmenten, falsch verwendete enge Strassen. Nur informativ, keine automatische Korrektur.
@@ -97,6 +99,7 @@ Confronta i nomi delle strade dei segmenti visibili con il **repertorio ufficial
 - Evidenziazione dei segmenti sulla mappa, colore per stato (tabella sotto).
 - Scheda laterale **CH Names**: contatori filtrabili, elenco raggruppato `nome attuale → nome ufficiale`, clic = seleziona il segmento, ⌖ = centra la mappa, "Prossima differenza".
 - Riquadro nel pannello di modifica: selezionando un segmento appare il verdetto della scansione (stato, spiegazione, proposta) con Correggi / Correggi tutti (disattivabile).
+- Interruttori in cima alla scheda: "Attivo" (disattiva tutto) e "Scansione auto" (off = solo manuale con Riscansiona). Nascondere il livello nasconde anche il riquadro.
 - Correzione in 1 clic per segmento o per gruppo (max 25, conferma oltre 5). **Nulla viene salvato automaticamente**: le modifiche entrano nello stack di WME — rivedi e salva tu stesso (Ctrl+S, undo nativo).
 - Comuni bilingui (Biel/Bienne…): le denominazioni ufficiali `A/B` sono accettate per intero e per ciascuna parte; un nome alternativo corrispondente conta come OK (regolabile).
 - Controlli delle regole svizzere (senza dati esterni, disattivabili): micro-segmenti, anelli di 1-2 segmenti, uso scorretto del tipo Strada stretta. Solo informativi, nessuna correzione automatica.
@@ -137,6 +140,7 @@ Compares the street names of visible segments with the Swiss federal **official 
 - Map highlighting of segments, one color per status (table below).
 - **CH Names** sidebar tab: filterable counters, list grouped by `current name → official name`, click = select the segment, ⌖ = center the map, "Next issue".
 - Box in the edit panel: selecting a segment shows the scan verdict (status, explanation, suggestion) with Fix / Fix all buttons (toggleable).
+- Master toggles at the top of the tab: "Enabled" (turns everything off) and "Auto scan" (off = manual Rescan only). Unchecking the layer also hides the box.
 - One-click fix per segment or per group (capped at 25, confirmation above 5). **Nothing is ever auto-saved**: edits go into the WME edit stack — review and save yourself (Ctrl+S, native undo).
 - Bilingual communes (Biel/Bienne…): official `A/B` labels accepted as a whole and per part; a matching alternate name counts as OK (configurable).
 - Swiss guideline checks (no external data, toggleable): micro-segments, 1-2 segment loops, Narrow Street misuse. Informational only, no automatic fix.

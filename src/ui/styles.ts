@@ -48,6 +48,7 @@ ${statusChipRules}
 .chk-helper-head { display: flex; align-items: center; gap: 6px; }
 .chk-helper-sug { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .chk-helper button { cursor: pointer; }
+.chk-master { display: flex; gap: 14px; padding: 2px 0; border-bottom: 1px solid #eee; }
 `;
 
 let injected = false;

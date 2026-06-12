@@ -33,6 +33,10 @@ export type CityScoping = "off" | "warn" | "strict";
 
 export interface Settings {
   version: 1;
+  /** Master switch: off disables scanning, the layer and the edit-panel box. */
+  enabled: boolean;
+  /** Scan automatically on map moves; off = manual Rescan button only. */
+  autoScan: boolean;
   minZoom: number;
   checkedRoadTypes: number[];
   altNameCountsAsOk: boolean;
@@ -47,6 +51,8 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   version: 1,
+  enabled: true,
+  autoScan: true,
   minZoom: 15,
   checkedRoadTypes: ROAD_TYPE_OPTIONS.filter((r) => r.defaultChecked).map((r) => r.id),
   altNameCountsAsOk: true,

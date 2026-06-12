@@ -26,6 +26,7 @@ export const LEGEND_KEYS: Record<IssueStatus, StringKey> = {
 
 export const STATE_KEYS: Record<ScanSnapshot["state"], StringKey> = {
   idle: "stateIdle",
+  disabled: "stateDisabled",
   "zoom-gated": "stateZoomGated",
   "area-gated": "stateAreaGated",
   fetching: "stateFetching",
@@ -146,12 +147,44 @@ export class TabUI {
 
     this.pane.append(
       header,
+      this.buildMasterToggles(),
       this.chipsBox,
       this.groupsBox,
       this.buildLegend(),
       this.buildSettings(),
       this.buildFooter(),
     );
+  }
+
+  private buildMasterToggles(): HTMLElement {
+    const row = el("div", "chk-settings chk-master");
+    const settings = this.settings.get();
+
+    const enabledLabel = el("label");
+    enabledLabel.title = t("toggleEnabledTitle");
+    const enabledCb = el("input") as HTMLInputElement;
+    enabledCb.type = "checkbox";
+    enabledCb.checked = settings.enabled;
+    enabledCb.addEventListener("change", () => {
+      this.settings.update({ enabled: enabledCb.checked });
+      if (enabledCb.checked) this.scanner.requestScan();
+      else this.scanner.disable();
+    });
+    enabledLabel.append(enabledCb, t("toggleEnabled"));
+
+    const autoLabel = el("label");
+    autoLabel.title = t("toggleAutoScanTitle");
+    const autoCb = el("input") as HTMLInputElement;
+    autoCb.type = "checkbox";
+    autoCb.checked = settings.autoScan;
+    autoCb.addEventListener("change", () => {
+      this.settings.update({ autoScan: autoCb.checked });
+      if (autoCb.checked && this.settings.get().enabled) this.scanner.requestScan();
+    });
+    autoLabel.append(autoCb, t("toggleAutoScan"));
+
+    row.append(enabledLabel, autoLabel);
+    return row;
   }
 
   private buildFooter(): HTMLElement {

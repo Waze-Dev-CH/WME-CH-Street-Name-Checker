@@ -38,9 +38,7 @@ export class EditPanelBox {
   init(): void {
     this.sdk.Events.on({ eventName: "wme-selection-changed", eventHandler: () => this.schedule() });
     this.sdk.Events.on({ eventName: "wme-after-edit", eventHandler: () => this.schedule() });
-    this.scanner.onUpdate(() => {
-      if (document.getElementById(CONTAINER_ID)) this.schedule();
-    });
+    this.scanner.onUpdate(() => this.schedule());
   }
 
   private selectedSegmentId(): number | null {
@@ -59,7 +57,8 @@ export class EditPanelBox {
     for (const timer of this.retryTimers) clearTimeout(timer);
     this.retryTimers = [];
     const segmentId = this.selectedSegmentId();
-    if (!this.settings.get().editPanelHelper || segmentId === null) {
+    const s = this.settings.get();
+    if (!s.editPanelHelper || !s.enabled || this.scanner.paused || segmentId === null) {
       document.getElementById(CONTAINER_ID)?.remove();
       return;
     }

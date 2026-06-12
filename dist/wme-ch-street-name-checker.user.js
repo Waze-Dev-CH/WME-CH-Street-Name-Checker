@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      0.7.0
+// @version      0.8.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -237,6 +237,11 @@
   // src/i18n.ts
   var en = {
     stateIdle: "Idle",
+    stateDisabled: "Script disabled",
+    toggleEnabled: "Enabled",
+    toggleEnabledTitle: "Master switch: off disables scanning, the map layer and the edit-panel box",
+    toggleAutoScan: "Auto scan",
+    toggleAutoScanTitle: "Scan automatically when the map moves; off = use the Rescan button",
     stateZoomGated: "Zoom in to scan",
     stateAreaGated: "View too large to scan",
     stateFetching: "Fetching official register…",
@@ -302,6 +307,11 @@
   };
   var fr = {
     stateIdle: "En attente",
+    stateDisabled: "Script désactivé",
+    toggleEnabled: "Actif",
+    toggleEnabledTitle: "Interrupteur général: désactive le scan, la couche carte et l'encadré du panneau",
+    toggleAutoScan: "Scan auto",
+    toggleAutoScanTitle: "Scanner automatiquement au déplacement de la carte; sinon utiliser le bouton Rescanner",
     stateZoomGated: "Zoomez pour scanner",
     stateAreaGated: "Vue trop large pour scanner",
     stateFetching: "Lecture du répertoire officiel…",
@@ -367,6 +377,11 @@
   };
   var de = {
     stateIdle: "Bereit",
+    stateDisabled: "Skript deaktiviert",
+    toggleEnabled: "Aktiv",
+    toggleEnabledTitle: "Hauptschalter: deaktiviert Scan, Kartenebene und Panel-Box",
+    toggleAutoScan: "Auto-Scan",
+    toggleAutoScanTitle: "Automatisch bei Kartenbewegung scannen; sonst Neu-scannen-Knopf verwenden",
     stateZoomGated: "Zum Scannen hineinzoomen",
     stateAreaGated: "Ausschnitt zu gross zum Scannen",
     stateFetching: "Amtliches Verzeichnis wird geladen…",
@@ -432,6 +447,11 @@
   };
   var it = {
     stateIdle: "In attesa",
+    stateDisabled: "Script disattivato",
+    toggleEnabled: "Attivo",
+    toggleEnabledTitle: "Interruttore generale: disattiva scansione, livello mappa e riquadro del pannello",
+    toggleAutoScan: "Scansione auto",
+    toggleAutoScanTitle: "Scansiona automaticamente al movimento della mappa; altrimenti usare Riscansiona",
     stateZoomGated: "Ingrandisci per scansionare",
     stateAreaGated: "Vista troppo ampia per la scansione",
     stateFetching: "Lettura del repertorio ufficiale…",
@@ -1101,7 +1121,11 @@
     };
     paused = false;
     start() {
-      const onMove = () => this.requestScan();
+      const onMove = () => {
+        const s = this.settings.get();
+        if (!s.enabled || !s.autoScan) return;
+        this.requestScan();
+      };
       this.sdk.Events.on({ eventName: "wme-map-move-end", eventHandler: onMove });
       this.sdk.Events.on({ eventName: "wme-map-data-loaded", eventHandler: onMove });
       this.sdk.Events.on({ eventName: "wme-after-edit", eventHandler: () => this.reevaluate() });
@@ -1137,14 +1161,24 @@
       this.coveredTiles = null;
       this.requestScan();
     }
+    /** Disable everything: abort, clear results, publish the disabled state. */
+    disable() {
+      this.controller?.abort();
+      clearTimeout(this.debounceTimer);
+      this.publish({ state: "disabled", issues: /* @__PURE__ */ new Map(), progress: null });
+    }
     /** Re-run evaluation against the last fetched official index, without refetching. */
     reevaluate() {
-      if (this.paused || !this.lastIndex) return;
+      if (this.paused || !this.settings.get().enabled || !this.lastIndex) return;
       this.evaluateAll(this.lastIndex);
       this.publish({ state: "done" });
     }
     async scan() {
       if (this.paused) return;
+      if (!this.settings.get().enabled) {
+        this.disable();
+        return;
+      }
       const gen = ++this.generation;
       this.controller?.abort();
       const controller = new AbortController();
@@ -1291,6 +1325,8 @@
   ];
   var DEFAULT_SETTINGS = {
     version: 1,
+    enabled: true,
+    autoScan: true,
     minZoom: 15,
     checkedRoadTypes: ROAD_TYPE_OPTIONS.filter((r) => r.defaultChecked).map((r) => r.id),
     altNameCountsAsOk: true,
@@ -1439,6 +1475,7 @@ ${statusChipRules}
 .chk-helper-head { display: flex; align-items: center; gap: 6px; }
 .chk-helper-sug { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .chk-helper button { cursor: pointer; }
+.chk-master { display: flex; gap: 14px; padding: 2px 0; border-bottom: 1px solid #eee; }
 `;
   var injected = false;
   function injectStyles() {
@@ -1465,6 +1502,7 @@ ${statusChipRules}
   };
   var STATE_KEYS = {
     idle: "stateIdle",
+    disabled: "stateDisabled",
     "zoom-gated": "stateZoomGated",
     "area-gated": "stateAreaGated",
     fetching: "stateFetching",
@@ -1563,6 +1601,7 @@ ${statusChipRules}
       this.groupsBox = el("div", "chk-groups");
       this.pane.append(
         header,
+        this.buildMasterToggles(),
         this.chipsBox,
         this.groupsBox,
         this.buildLegend(),
@@ -1570,9 +1609,36 @@ ${statusChipRules}
         this.buildFooter()
       );
     }
+    buildMasterToggles() {
+      const row = el("div", "chk-settings chk-master");
+      const settings = this.settings.get();
+      const enabledLabel = el("label");
+      enabledLabel.title = t("toggleEnabledTitle");
+      const enabledCb = el("input");
+      enabledCb.type = "checkbox";
+      enabledCb.checked = settings.enabled;
+      enabledCb.addEventListener("change", () => {
+        this.settings.update({ enabled: enabledCb.checked });
+        if (enabledCb.checked) this.scanner.requestScan();
+        else this.scanner.disable();
+      });
+      enabledLabel.append(enabledCb, t("toggleEnabled"));
+      const autoLabel = el("label");
+      autoLabel.title = t("toggleAutoScanTitle");
+      const autoCb = el("input");
+      autoCb.type = "checkbox";
+      autoCb.checked = settings.autoScan;
+      autoCb.addEventListener("change", () => {
+        this.settings.update({ autoScan: autoCb.checked });
+        if (autoCb.checked && this.settings.get().enabled) this.scanner.requestScan();
+      });
+      autoLabel.append(autoCb, t("toggleAutoScan"));
+      row.append(enabledLabel, autoLabel);
+      return row;
+    }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"0.7.0"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"0.8.0"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/wme-ch-street-name-checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -1916,9 +1982,7 @@ ${statusChipRules}
     init() {
       this.sdk.Events.on({ eventName: "wme-selection-changed", eventHandler: () => this.schedule() });
       this.sdk.Events.on({ eventName: "wme-after-edit", eventHandler: () => this.schedule() });
-      this.scanner.onUpdate(() => {
-        if (document.getElementById(CONTAINER_ID)) this.schedule();
-      });
+      this.scanner.onUpdate(() => this.schedule());
     }
     selectedSegmentId() {
       try {
@@ -1934,7 +1998,8 @@ ${statusChipRules}
       for (const timer of this.retryTimers) clearTimeout(timer);
       this.retryTimers = [];
       const segmentId = this.selectedSegmentId();
-      if (!this.settings.get().editPanelHelper || segmentId === null) {
+      const s = this.settings.get();
+      if (!s.editPanelHelper || !s.enabled || this.scanner.paused || segmentId === null) {
         document.getElementById(CONTAINER_ID)?.remove();
         return;
       }
@@ -2090,7 +2155,7 @@ ${statusChipRules}
     await tab.init();
     new EditPanelBox(sdk2, scanner, settings).init();
     scanner.start();
-    log.info(`v${"0.7.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"0.8.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();
