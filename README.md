@@ -20,6 +20,7 @@ Userscript Tampermonkey pour le [Waze Map Editor](https://www.waze.com/editor) q
 | `NARROW_MISUSE` | Rue étroite à sens unique ou < 50 m | indigo pointillé |
 
 - Onglet latéral **CH Names** (panneau Scripts): compteurs filtrables, liste groupée par `nom actuel → nom officiel`, clic sur une ligne = sélection du segment, bouton "Next issue".
+- Assistant dans le panneau d'édition du segment: à la sélection d'un segment, affiche le statut de son nom, la suggestion avec bouton Appliquer, et une recherche dans les noms officiels du secteur (localité du segment en premier) — un clic applique le nom, plus besoin de le taper.
 - Correction 1-clic par segment ou par groupe (cap 25, confirmation au-delà de 5). **Rien n'est sauvegardé automatiquement**: les modifications entrent dans la pile d'édition WME, tu relis et sauves toi-même (Ctrl+S, undo natif).
 - Communes bilingues (Biel/Bienne…): les libellés officiels `A/B` sont acceptés en entier et pour chaque partie; un nom alternatif Waze qui correspond compte comme OK (réglable).
 - Réglages persistants: types de routes vérifiés, scoping par localité (off/warn/strict), labels carte, zoom minimal, conservation de l'ancien nom en alternatif, langue (auto = locale WME, ou EN/FR/DE/IT).

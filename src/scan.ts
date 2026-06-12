@@ -93,6 +93,10 @@ export class Scanner {
     return this.snapshot;
   }
 
+  getOfficialIndex(): OfficialIndex | null {
+    return this.lastIndex;
+  }
+
   setPaused(paused: boolean): void {
     this.paused = paused;
     if (paused) {
