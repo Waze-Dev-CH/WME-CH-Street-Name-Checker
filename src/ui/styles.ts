@@ -17,7 +17,7 @@ export const CSS = `
 .chk-chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chk-chip { border: 1px solid #ccc; border-radius: 10px; padding: 1px 8px; background: #fff; font-size: 11px; }
 .chk-chip.chk-chip-active { border-color: #333; box-shadow: inset 0 0 0 1px #333; }
-.chk-chip .chk-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+.chk-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; flex-shrink: 0; }
 .chk-groups { display: flex; flex-direction: column; gap: 4px; max-height: 50vh; overflow-y: auto; }
 .chk-group { border: 1px solid #ddd; border-radius: 4px; }
 .chk-group-header { display: flex; align-items: center; gap: 6px; padding: 4px 6px; cursor: pointer; }

@@ -8,6 +8,15 @@ import { injectStyles } from "./styles";
 
 const ROAD_TYPE_LABELS = new Map(ROAD_TYPE_OPTIONS.map((r) => [r.id, r.label]));
 
+const STATUS_LEGEND: Record<IssueStatus, string> = {
+  COSMETIC: "typography only (case, apostrophe, spacing) — dashed line",
+  VARIANT: "abbreviation or missing accent; official spelling suggested",
+  NEAR: "probable typo; one close official name found",
+  WRONG_CITY: "name exists, but in another locality (city scoping)",
+  NOT_FOUND: "not found in the official register",
+  UNNAMED: "checked road type without a street name — dashed line",
+};
+
 const STATE_TEXT: Record<ScanSnapshot["state"], string> = {
   idle: "Idle",
   "zoom-gated": "Zoom in to scan",
@@ -111,7 +120,20 @@ export class TabUI {
     this.chipsBox = el("div", "chk-chips");
     this.groupsBox = el("div", "chk-groups");
 
-    this.pane.append(header, this.chipsBox, this.groupsBox, this.buildSettings());
+    this.pane.append(header, this.chipsBox, this.groupsBox, this.buildLegend(), this.buildSettings());
+  }
+
+  private buildLegend(): HTMLElement {
+    const details = el("details", "chk-settings");
+    details.appendChild(el("summary", "", "Legend"));
+    for (const status of Object.keys(STATUS_STYLES) as IssueStatus[]) {
+      const row = el("div", "chk-settings-row");
+      const dot = el("span", "chk-dot");
+      dot.style.background = STATUS_STYLES[status].strokeColor;
+      row.append(dot, el("span", "", `${status}: ${STATUS_LEGEND[status]}`));
+      details.appendChild(row);
+    }
+    return details;
   }
 
   private render(snapshot: ScanSnapshot): void {
