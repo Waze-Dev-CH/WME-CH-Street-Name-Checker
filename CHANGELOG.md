@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.5] - 2026-06-12
+
+### Changed
+- Repository renamed to WME-CH-Street-Name-Checker; homepage, support, download and update URLs updated (GitHub redirects the old name, existing installs keep updating).
+
 ## [1.1.4] - 2026-06-12
 
 ### Changed

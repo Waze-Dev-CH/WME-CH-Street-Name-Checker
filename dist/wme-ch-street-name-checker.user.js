@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.1.4
+// @version      1.1.5
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
-// @homepageURL  https://github.com/Neprena/wme-ch-street-name-checker
-// @supportURL   https://github.com/Neprena/wme-ch-street-name-checker/issues
-// @downloadURL  https://raw.githubusercontent.com/Neprena/wme-ch-street-name-checker/main/dist/wme-ch-street-name-checker.user.js
-// @updateURL    https://raw.githubusercontent.com/Neprena/wme-ch-street-name-checker/main/dist/wme-ch-street-name-checker.user.js
+// @homepageURL  https://github.com/Neprena/WME-CH-Street-Name-Checker
+// @supportURL   https://github.com/Neprena/WME-CH-Street-Name-Checker/issues
+// @downloadURL  https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js
+// @updateURL    https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js
 // @match        https://www.waze.com/editor*
 // @match        https://www.waze.com/*/editor*
 // @match        https://beta.waze.com/editor*
@@ -2045,9 +2045,9 @@ ${statusChipRules}
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"1.1.4"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"1.1.5"} · `));
       const link = el("a", "", "Changelog");
-      link.href = "https://github.com/Neprena/wme-ch-street-name-checker/blob/main/CHANGELOG.md";
+      link.href = "https://github.com/Neprena/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
       link.rel = "noopener";
       footer.appendChild(link);
@@ -2606,7 +2606,7 @@ ${statusChipRules}
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.1.4"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.1.5"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();
