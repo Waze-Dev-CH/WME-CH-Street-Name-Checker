@@ -1,5 +1,5 @@
 import type { WmeSDK } from "wme-sdk-typings";
-import { fixGroup, fixSegment, GROUP_FIX_CAP, GROUP_FIX_CONFIRM_THRESHOLD, type FixOutcome } from "../fix";
+import { fixGroup, fixSegment, formatFixError, GROUP_FIX_CAP, GROUP_FIX_CONFIRM_THRESHOLD } from "../fix";
 import { LANGUAGE_CHOICES, resolveLocale, setLocale, t, type LanguagePreference, type StringKey } from "../i18n";
 import { STATUS_STYLES } from "../map-layer";
 import type { Issue, IssueNote, IssueStatus } from "../matching/evaluate";
@@ -11,7 +11,7 @@ import { injectStyles } from "./styles";
 // shared vocabulary and Waze's own localized terms vary by UI version.
 const ROAD_TYPE_LABELS = new Map(ROAD_TYPE_OPTIONS.map((r) => [r.id, r.label]));
 
-const LEGEND_KEYS: Record<IssueStatus, StringKey> = {
+export const LEGEND_KEYS: Record<IssueStatus, StringKey> = {
   COSMETIC: "legendCOSMETIC",
   VARIANT: "legendVARIANT",
   NEAR: "legendNEAR",
@@ -24,7 +24,7 @@ const LEGEND_KEYS: Record<IssueStatus, StringKey> = {
   NARROW_MISUSE: "legendNARROW_MISUSE",
 };
 
-const STATE_KEYS: Record<ScanSnapshot["state"], StringKey> = {
+export const STATE_KEYS: Record<ScanSnapshot["state"], StringKey> = {
   idle: "stateIdle",
   "zoom-gated": "stateZoomGated",
   "area-gated": "stateAreaGated",
@@ -46,7 +46,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-function formatNote(note: IssueNote | null): string {
+export function formatNote(note: IssueNote | null): string {
   if (!note) return "";
   const parts: string[] = [];
   if (note.unofficial) parts.push(t("noteUnofficial"));
@@ -54,11 +54,6 @@ function formatNote(note: IssueNote | null): string {
   if (note.fullLabel) parts.push(t("noteFullLabel", { label: note.fullLabel }));
   if (note.existsIn) parts.push(t("noteExistsIn", { place: note.existsIn }));
   return parts.join(", ");
-}
-
-function formatFixError(outcome: FixOutcome): string {
-  if (outcome.errorCode) return t(outcome.errorCode);
-  return outcome.errorDetail ?? "?";
 }
 
 interface IssueGroup {
@@ -443,7 +438,12 @@ export class TabUI {
       textKey: StringKey,
       key: keyof Pick<
         Settings,
-        "altNameCountsAsOk" | "showCosmetic" | "showMapLabels" | "keepOldNameAsAlt" | "guidelineChecks"
+        | "altNameCountsAsOk"
+        | "showCosmetic"
+        | "showMapLabels"
+        | "keepOldNameAsAlt"
+        | "guidelineChecks"
+        | "editPanelHelper"
       >,
       titleKey?: StringKey,
     ): HTMLElement => {
@@ -464,6 +464,7 @@ export class TabUI {
     details.appendChild(toggle("showMapLabels", "showMapLabels"));
     details.appendChild(toggle("keepOldName", "keepOldNameAsAlt", "keepOldNameTitle"));
     details.appendChild(toggle("guidelineChecks", "guidelineChecks", "guidelineChecksTitle"));
+    details.appendChild(toggle("helperSetting", "editPanelHelper"));
 
     const scopingRow = el("div", "chk-settings-row");
     scopingRow.appendChild(el("span", "", t("scopingLabel")));

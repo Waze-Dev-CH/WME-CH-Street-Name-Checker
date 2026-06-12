@@ -1,4 +1,5 @@
 import type { WmeSDK } from "wme-sdk-typings";
+import { t } from "./i18n";
 import { log } from "./log";
 import type { Issue } from "./matching/evaluate";
 import type { Settings } from "./settings";
@@ -20,6 +21,11 @@ export interface FixOutcome {
   errorCode?: FixErrorCode;
   /** Raw message for unexpected SDK errors (not localized). */
   errorDetail?: string;
+}
+
+export function formatFixError(outcome: FixOutcome): string {
+  if (outcome.errorCode) return t(outcome.errorCode);
+  return outcome.errorDetail ?? "?";
 }
 
 /**

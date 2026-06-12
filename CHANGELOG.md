@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.7.0] - 2026-06-12
+
+### Added
+- Issue box in the segment edit panel: selecting a segment shows its scan verdict (status, explanation, current name -> official suggestion) with Fix and Fix all buttons. Unlike the 0.4.0 experiment, there is no search field. Toggleable in the settings.
+
 ## [0.6.0] - 2026-06-12
 
 ### Added

@@ -44,6 +44,10 @@ ${statusChipRules}
 .chk-muted { color: #888; }
 .chk-error { color: #c00; }
 .chk-footer { font-size: 11px; border-top: 1px solid #eee; padding-top: 4px; margin-top: 2px; }
+.chk-helper { margin: 8px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; background: #fafafa; display: flex; flex-direction: column; gap: 5px; }
+.chk-helper-head { display: flex; align-items: center; gap: 6px; }
+.chk-helper-sug { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chk-helper button { cursor: pointer; }
 `;
 
 let injected = false;
