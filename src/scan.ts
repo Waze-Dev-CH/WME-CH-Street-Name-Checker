@@ -264,7 +264,11 @@ export class Scanner {
           stats.skipped++;
           break;
         case "issue":
-          issues.set(verdict.issue.segmentId, verdict.issue);
+          if (settings.enabledStatuses.includes(verdict.issue.status)) {
+            issues.set(verdict.issue.segmentId, verdict.issue);
+          } else {
+            stats.skipped++;
+          }
           break;
       }
     }
@@ -280,7 +284,9 @@ export class Scanner {
         }
       };
       for (const issue of evaluateGuidelines(segments, getAddress)) {
-        if (!issues.has(issue.segmentId)) issues.set(issue.segmentId, issue);
+        if (!issues.has(issue.segmentId) && settings.enabledStatuses.includes(issue.status)) {
+          issues.set(issue.segmentId, issue);
+        }
       }
     }
     this.publish({ issues, stats, unsavedCount: this.safeUnsavedCount() });

@@ -29,13 +29,10 @@ async function main(): Promise<void> {
   // Resync the OpenLayers layer only when results actually change; progress
   // ticks during a fetch reuse the same issues map and must stay free.
   let lastSyncedIssues: ReadonlyMap<number, unknown> | null = null;
-  let lastShowCosmetic: boolean | null = null;
   scanner.onUpdate((snapshot) => {
-    const showCosmetic = settings.get().showCosmetic;
-    if (snapshot.issues !== lastSyncedIssues || showCosmetic !== lastShowCosmetic) {
+    if (snapshot.issues !== lastSyncedIssues) {
       lastSyncedIssues = snapshot.issues;
-      lastShowCosmetic = showCosmetic;
-      layer.sync(snapshot.issues, showCosmetic);
+      layer.sync(snapshot.issues);
     }
   });
 

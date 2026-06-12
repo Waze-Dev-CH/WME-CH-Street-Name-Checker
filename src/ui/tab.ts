@@ -11,7 +11,7 @@ import { LANGUAGE_CHOICES, resolveLocale, setLocale, t, type LanguagePreference,
 import { STATUS_STYLES } from "../map-layer";
 import type { Issue, IssueNote, IssueStatus } from "../matching/evaluate";
 import type { ScanSnapshot, Scanner } from "../scan";
-import { ROAD_TYPE_OPTIONS, type CityScoping, type Settings, type SettingsStore } from "../settings";
+import { ALL_STATUSES, ROAD_TYPE_OPTIONS, type CityScoping, type Settings, type SettingsStore } from "../settings";
 import { injectStyles } from "./styles";
 
 // Road type names stay in English on purpose: they are the WME community's
@@ -272,11 +272,9 @@ export class TabUI {
   }
 
   private visibleIssues(issues: ReadonlyMap<number, Issue>): Issue[] {
-    const settings = this.settings.get();
-    return [...issues.values()].filter((issue) => {
-      if (!settings.showCosmetic && issue.status === "COSMETIC") return false;
-      return this.activeFilters.size === 0 || this.activeFilters.has(issue.status);
-    });
+    return [...issues.values()].filter(
+      (issue) => this.activeFilters.size === 0 || this.activeFilters.has(issue.status),
+    );
   }
 
   private renderChips(issues: ReadonlyMap<number, Issue>): void {
@@ -555,12 +553,33 @@ export class TabUI {
     details.appendChild(el("div", "", t("roadTypesLabel")));
     details.appendChild(grid);
 
+    const statusGrid = el("div", "chk-settings-grid");
+    for (const status of ALL_STATUSES) {
+      const label = el("label");
+      label.title = t(LEGEND_KEYS[status]);
+      const cb = el("input") as HTMLInputElement;
+      cb.type = "checkbox";
+      cb.checked = settings.enabledStatuses.includes(status);
+      cb.addEventListener("change", () => {
+        const current = new Set(this.settings.get().enabledStatuses);
+        if (cb.checked) current.add(status);
+        else current.delete(status);
+        this.settings.update({ enabledStatuses: ALL_STATUSES.filter((s) => current.has(s)) });
+        this.scanner.reevaluate();
+      });
+      const dot = el("span", "chk-dot");
+      dot.style.background = STATUS_STYLES[status].strokeColor;
+      label.append(cb, dot, status);
+      statusGrid.appendChild(label);
+    }
+    details.appendChild(el("div", "", t("statusesLabel")));
+    details.appendChild(statusGrid);
+
     const toggle = (
       textKey: StringKey,
       key: keyof Pick<
         Settings,
         | "altNameCountsAsOk"
-        | "showCosmetic"
         | "showMapLabels"
         | "keepOldNameAsAlt"
         | "guidelineChecks"
@@ -582,7 +601,6 @@ export class TabUI {
     };
 
     details.appendChild(toggle("altOk", "altNameCountsAsOk", "altOkTitle"));
-    details.appendChild(toggle("showCosmetic", "showCosmetic"));
     details.appendChild(toggle("showMapLabels", "showMapLabels"));
     details.appendChild(toggle("keepOldName", "keepOldNameAsAlt", "keepOldNameTitle"));
     details.appendChild(toggle("guidelineChecks", "guidelineChecks", "guidelineChecksTitle"));

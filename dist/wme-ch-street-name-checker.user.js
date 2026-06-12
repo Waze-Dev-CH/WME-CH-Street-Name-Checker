@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.4.0
+// @version      1.5.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -410,9 +410,9 @@
     helperSetting: "Issue box in the segment edit panel",
     settingsTitle: "Settings",
     roadTypesLabel: "Checked road types:",
+    statusesLabel: "Checked issue types:",
     altOk: "Alternate name match counts as OK",
     altOkTitle: "Useful in bilingual communes where the second language is an alternate name",
-    showCosmetic: "Show cosmetic differences",
     showMapLabels: "Show expected name on the map (zoom ≥ 17)",
     keepOldName: "Keep old name as alternate when fixing",
     keepOldNameTitle: "Never applied to typo (NEAR) fixes",
@@ -485,9 +485,9 @@
     helperSetting: "Encadré d'écart dans le panneau d'édition du segment",
     settingsTitle: "Réglages",
     roadTypesLabel: "Types de routes vérifiés:",
+    statusesLabel: "Types d'erreurs vérifiés:",
     altOk: "Nom alternatif correspondant = OK",
     altOkTitle: "Utile dans les communes bilingues où la seconde langue est en nom alternatif",
-    showCosmetic: "Afficher les différences cosmétiques",
     showMapLabels: "Afficher le nom attendu sur la carte (zoom ≥ 17)",
     keepOldName: "Conserver l'ancien nom en alternatif lors de la correction",
     keepOldNameTitle: "Jamais appliqué aux corrections de fautes de frappe (NEAR)",
@@ -560,9 +560,9 @@
     helperSetting: "Abweichungsbox im Segment-Bearbeitungspanel",
     settingsTitle: "Einstellungen",
     roadTypesLabel: "Geprüfte Strassentypen:",
+    statusesLabel: "Geprüfte Fehlertypen:",
     altOk: "Alternativname zählt als OK",
     altOkTitle: "Nützlich in zweisprachigen Gemeinden mit der zweiten Sprache als Alternativname",
-    showCosmetic: "Kosmetische Unterschiede anzeigen",
     showMapLabels: "Erwarteten Namen auf der Karte anzeigen (Zoom ≥ 17)",
     keepOldName: "Alten Namen bei Korrektur als Alternative behalten",
     keepOldNameTitle: "Nie bei Tippfehler-Korrekturen (NEAR)",
@@ -635,9 +635,9 @@
     helperSetting: "Riquadro differenze nel pannello di modifica del segmento",
     settingsTitle: "Impostazioni",
     roadTypesLabel: "Tipi di strada verificati:",
+    statusesLabel: "Tipi di errore verificati:",
     altOk: "Nome alternativo corrispondente = OK",
     altOkTitle: "Utile nei comuni bilingui con la seconda lingua come nome alternativo",
-    showCosmetic: "Mostra differenze cosmetiche",
     showMapLabels: "Mostra il nome atteso sulla mappa (zoom ≥ 17)",
     keepOldName: "Mantieni il vecchio nome come alternativo alla correzione",
     keepOldNameTitle: "Mai applicato alle correzioni di errori di battitura (NEAR)",
@@ -736,9 +736,9 @@
         }))
       });
     }
-    sync(issues, showCosmetic) {
+    sync(issues) {
       this.sdk.Map.removeAllFeaturesFromLayer({ layerName: LAYER_NAME });
-      const features = [...issues.values()].filter((issue) => showCosmetic || issue.status !== "COSMETIC").map((issue) => ({
+      const features = [...issues.values()].map((issue) => ({
         type: "Feature",
         id: `chk-${issue.segmentId}`,
         geometry: issue.geometry,
@@ -1719,7 +1719,11 @@
             stats.skipped++;
             break;
           case "issue":
-            issues.set(verdict.issue.segmentId, verdict.issue);
+            if (settings.enabledStatuses.includes(verdict.issue.status)) {
+              issues.set(verdict.issue.segmentId, verdict.issue);
+            } else {
+              stats.skipped++;
+            }
             break;
         }
       }
@@ -1734,7 +1738,9 @@
           }
         };
         for (const issue of evaluateGuidelines(segments, getAddress)) {
-          if (!issues.has(issue.segmentId)) issues.set(issue.segmentId, issue);
+          if (!issues.has(issue.segmentId) && settings.enabledStatuses.includes(issue.status)) {
+            issues.set(issue.segmentId, issue);
+          }
         }
       }
       this.publish({ issues, stats, unsavedCount: this.safeUnsavedCount() });
@@ -1863,14 +1869,27 @@
     { id: 18, label: "Railroad", defaultChecked: false },
     { id: 19, label: "Runway/Taxiway", defaultChecked: false }
   ];
+  var ALL_STATUSES = [
+    "COSMETIC",
+    "VARIANT",
+    "NEAR",
+    "WRONG_TYPE",
+    "WRONG_STREET",
+    "WRONG_CITY",
+    "NOT_FOUND",
+    "UNNAMED",
+    "MICRO_SEGMENT",
+    "LOOP",
+    "NARROW_MISUSE"
+  ];
   var DEFAULT_SETTINGS = {
-    version: 1,
+    version: 2,
     enabled: true,
     autoScan: true,
     minZoom: 15,
     checkedRoadTypes: ROAD_TYPE_OPTIONS.filter((r) => r.defaultChecked).map((r) => r.id),
+    enabledStatuses: [...ALL_STATUSES],
     altNameCountsAsOk: true,
-    showCosmetic: true,
     cityScoping: "off",
     showMapLabels: true,
     keepOldNameAsAlt: false,
@@ -1880,13 +1899,20 @@
     geometryMatching: true
   };
   var STORAGE_KEY = "wme-ch-name-check.settings";
+  function migrateSettings(parsed) {
+    if (parsed.version === 1) {
+      const legacy = parsed;
+      const enabledStatuses = legacy.showCosmetic === false ? ALL_STATUSES.filter((status) => status !== "COSMETIC") : [...ALL_STATUSES];
+      return { ...DEFAULT_SETTINGS, ...parsed, version: 2, enabledStatuses };
+    }
+    if (parsed.version !== 2) return { ...DEFAULT_SETTINGS };
+    return { ...DEFAULT_SETTINGS, ...parsed };
+  }
   function loadSettings() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return { ...DEFAULT_SETTINGS };
-      const parsed = JSON.parse(raw);
-      if (parsed.version !== 1) return { ...DEFAULT_SETTINGS };
-      return { ...DEFAULT_SETTINGS, ...parsed };
+      return migrateSettings(JSON.parse(raw));
     } catch (err) {
       log.warn("Failed to load settings, using defaults", err);
       return { ...DEFAULT_SETTINGS };
@@ -2141,7 +2167,7 @@ ${statusChipRules}
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"1.4.0"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"1.5.0"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -2185,11 +2211,9 @@ ${statusChipRules}
       this.renderGroups(groups, visible.length, state);
     }
     visibleIssues(issues) {
-      const settings = this.settings.get();
-      return [...issues.values()].filter((issue) => {
-        if (!settings.showCosmetic && issue.status === "COSMETIC") return false;
-        return this.activeFilters.size === 0 || this.activeFilters.has(issue.status);
-      });
+      return [...issues.values()].filter(
+        (issue) => this.activeFilters.size === 0 || this.activeFilters.has(issue.status)
+      );
     }
     renderChips(issues) {
       this.chipsBox.replaceChildren();
@@ -2436,6 +2460,27 @@ ${statusChipRules}
       }
       details.appendChild(el("div", "", t("roadTypesLabel")));
       details.appendChild(grid);
+      const statusGrid = el("div", "chk-settings-grid");
+      for (const status of ALL_STATUSES) {
+        const label = el("label");
+        label.title = t(LEGEND_KEYS[status]);
+        const cb = el("input");
+        cb.type = "checkbox";
+        cb.checked = settings.enabledStatuses.includes(status);
+        cb.addEventListener("change", () => {
+          const current2 = new Set(this.settings.get().enabledStatuses);
+          if (cb.checked) current2.add(status);
+          else current2.delete(status);
+          this.settings.update({ enabledStatuses: ALL_STATUSES.filter((s) => current2.has(s)) });
+          this.scanner.reevaluate();
+        });
+        const dot = el("span", "chk-dot");
+        dot.style.background = STATUS_STYLES[status].strokeColor;
+        label.append(cb, dot, status);
+        statusGrid.appendChild(label);
+      }
+      details.appendChild(el("div", "", t("statusesLabel")));
+      details.appendChild(statusGrid);
       const toggle = (textKey, key, titleKey) => {
         const label = el("label");
         if (titleKey) label.title = t(titleKey);
@@ -2449,7 +2494,6 @@ ${statusChipRules}
         return row;
       };
       details.appendChild(toggle("altOk", "altNameCountsAsOk", "altOkTitle"));
-      details.appendChild(toggle("showCosmetic", "showCosmetic"));
       details.appendChild(toggle("showMapLabels", "showMapLabels"));
       details.appendChild(toggle("keepOldName", "keepOldNameAsAlt", "keepOldNameTitle"));
       details.appendChild(toggle("guidelineChecks", "guidelineChecks", "guidelineChecksTitle"));
@@ -2720,13 +2764,10 @@ ${statusChipRules}
       scanner.setPaused(!checked);
     });
     let lastSyncedIssues = null;
-    let lastShowCosmetic = null;
     scanner.onUpdate((snapshot) => {
-      const showCosmetic = settings.get().showCosmetic;
-      if (snapshot.issues !== lastSyncedIssues || showCosmetic !== lastShowCosmetic) {
+      if (snapshot.issues !== lastSyncedIssues) {
         lastSyncedIssues = snapshot.issues;
-        lastShowCosmetic = showCosmetic;
-        layer.sync(snapshot.issues, showCosmetic);
+        layer.sync(snapshot.issues);
       }
     });
     const tab = new TabUI(sdk2, scanner, settings);
@@ -2734,7 +2775,7 @@ ${statusChipRules}
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.4.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.5.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

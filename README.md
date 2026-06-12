@@ -28,7 +28,7 @@ Compare les noms de rues des segments visibles avec le **répertoire officiel de
 - Routes cantonales/nationales hors localité: un nom introuvable sur une route principale est accepté si un axe officiel du même nom existe à moins de 3 km (prolongement du nom de la commune voisine, ex. Route de Berne entre Payerne et Corcelles).
 - Communes bilingues (Biel/Bienne…): les libellés officiels `A/B` sont acceptés en entier et pour chaque partie; un nom alternatif Waze qui correspond compte comme OK (réglable).
 - Contrôles des règles d'édition de Suisse romande (sans donnée externe, désactivables): micro-segments, boucles à 1-2 segments, mauvais usage du type Rue étroite. Statuts informatifs, sans correction automatique.
-- Réglages persistants: types de routes vérifiés, scoping par localité (off/warn/strict), labels carte, zoom minimal, conservation de l'ancien nom en alternatif, langue.
+- Réglages persistants: types de routes ET types d'erreurs vérifiés (case par statut), scoping par localité (off/warn/strict), labels carte, zoom minimal, conservation de l'ancien nom en alternatif, langue.
 
 ## Statuts
 
@@ -73,7 +73,7 @@ Vergleicht die Strassennamen der sichtbaren Segmente mit dem **amtlichen Strasse
 - Ausserortsstrecken von Kantons-/Nationalstrassen: ein unauffindbarer Name auf einer Hauptstrasse wird akzeptiert, wenn eine gleichnamige amtliche Achse innerhalb von 3 km existiert (Fortsetzung aus der Nachbargemeinde).
 - Zweisprachige Gemeinden (Biel/Bienne…): amtliche `A/B`-Bezeichnungen werden als Ganzes und je Teil akzeptiert; ein passender Alternativname zählt als OK (einstellbar).
 - Schweizer Regelprüfungen (ohne externe Daten, abschaltbar): Mikrosegmente, Schleifen aus 1-2 Segmenten, falsch verwendete enge Strassen. Nur informativ, keine automatische Korrektur.
-- Persistente Einstellungen: geprüfte Strassentypen, Ortschafts-Scoping, Kartenbeschriftung, Mindestzoom, alten Namen als Alternative behalten, Sprache.
+- Persistente Einstellungen: geprüfte Strassentypen UND Fehlertypen (Checkbox je Status), Ortschafts-Scoping, Kartenbeschriftung, Mindestzoom, alten Namen als Alternative behalten, Sprache.
 
 ## Status
 
@@ -118,7 +118,7 @@ Confronta i nomi delle strade dei segmenti visibili con il **repertorio ufficial
 - Strade cantonali/nazionali fuori località: un nome introvabile su una strada principale è accettato se un asse ufficiale omonimo esiste entro 3 km (continuazione dal comune vicino).
 - Comuni bilingui (Biel/Bienne…): le denominazioni ufficiali `A/B` sono accettate per intero e per ciascuna parte; un nome alternativo corrispondente conta come OK (regolabile).
 - Controlli delle regole svizzere (senza dati esterni, disattivabili): micro-segmenti, anelli di 1-2 segmenti, uso scorretto del tipo Strada stretta. Solo informativi, nessuna correzione automatica.
-- Impostazioni persistenti: tipi di strada verificati, scoping per località, etichette sulla mappa, zoom minimo, mantenere il vecchio nome come alternativo, lingua.
+- Impostazioni persistenti: tipi di strada E tipi di errore verificati (casella per stato), scoping per località, etichette sulla mappa, zoom minimo, mantenere il vecchio nome come alternativo, lingua.
 
 ## Stati
 
@@ -163,7 +163,7 @@ Compares the street names of visible segments with the Swiss federal **official 
 - Out-of-locality cantonal/national roads: a NOT_FOUND name on a main road is accepted when a same-named official axis exists within 3 km (continuation from the neighboring commune, e.g. Route de Berne between Payerne and Corcelles).
 - Bilingual communes (Biel/Bienne…): official `A/B` labels accepted as a whole and per part; a matching alternate name counts as OK (configurable).
 - Swiss guideline checks (no external data, toggleable): micro-segments, 1-2 segment loops, Narrow Street misuse. Informational only, no automatic fix.
-- Persistent settings: checked road types, city scoping, map labels, minimum zoom, keep old name as alternate, language.
+- Persistent settings: checked road types AND issue types (checkbox per status), city scoping, map labels, minimum zoom, keep old name as alternate, language.
 
 ## Statuses
 

@@ -1,4 +1,5 @@
 import type { LanguagePreference } from "./i18n";
+import type { IssueStatus } from "./matching/evaluate";
 import { log } from "./log";
 
 // Road type ids from the WME SDK ROAD_TYPE constant (values verified against
@@ -31,16 +32,32 @@ export const ROAD_TYPE_OPTIONS: RoadTypeOption[] = [
 
 export type CityScoping = "off" | "warn" | "strict";
 
+/** Severity order, also used by the settings grid. */
+export const ALL_STATUSES: IssueStatus[] = [
+  "COSMETIC",
+  "VARIANT",
+  "NEAR",
+  "WRONG_TYPE",
+  "WRONG_STREET",
+  "WRONG_CITY",
+  "NOT_FOUND",
+  "UNNAMED",
+  "MICRO_SEGMENT",
+  "LOOP",
+  "NARROW_MISUSE",
+];
+
 export interface Settings {
-  version: 1;
+  version: 2;
   /** Master switch: off disables scanning, the layer and the edit-panel box. */
   enabled: boolean;
   /** Scan automatically on map moves; off = manual Rescan button only. */
   autoScan: boolean;
   minZoom: number;
   checkedRoadTypes: number[];
+  /** Issue statuses reported everywhere (map, list, counters, navigation). */
+  enabledStatuses: IssueStatus[];
   altNameCountsAsOk: boolean;
-  showCosmetic: boolean;
   cityScoping: CityScoping;
   showMapLabels: boolean;
   keepOldNameAsAlt: boolean;
@@ -52,13 +69,13 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  version: 1,
+  version: 2,
   enabled: true,
   autoScan: true,
   minZoom: 15,
   checkedRoadTypes: ROAD_TYPE_OPTIONS.filter((r) => r.defaultChecked).map((r) => r.id),
+  enabledStatuses: [...ALL_STATUSES],
   altNameCountsAsOk: true,
-  showCosmetic: true,
   cityScoping: "off",
   showMapLabels: true,
   keepOldNameAsAlt: false,
@@ -70,13 +87,25 @@ export const DEFAULT_SETTINGS: Settings = {
 
 const STORAGE_KEY = "wme-ch-name-check.settings";
 
+export function migrateSettings(parsed: Omit<Partial<Settings>, "version"> & { version?: number }): Settings {
+  if (parsed.version === 1) {
+    // v1 had a single showCosmetic boolean instead of the per-status grid
+    const legacy = parsed as Partial<Settings> & { showCosmetic?: boolean };
+    const enabledStatuses =
+      legacy.showCosmetic === false
+        ? ALL_STATUSES.filter((status) => status !== "COSMETIC")
+        : [...ALL_STATUSES];
+    return { ...DEFAULT_SETTINGS, ...parsed, version: 2, enabledStatuses };
+  }
+  if (parsed.version !== 2) return { ...DEFAULT_SETTINGS };
+  return { ...DEFAULT_SETTINGS, ...parsed };
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_SETTINGS };
-    const parsed = JSON.parse(raw) as Partial<Settings>;
-    if (parsed.version !== 1) return { ...DEFAULT_SETTINGS };
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    return migrateSettings(JSON.parse(raw) as Partial<Settings>);
   } catch (err) {
     log.warn("Failed to load settings, using defaults", err);
     return { ...DEFAULT_SETTINGS };

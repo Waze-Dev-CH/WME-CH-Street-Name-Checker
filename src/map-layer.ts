@@ -60,10 +60,9 @@ export class HighlightLayer {
     });
   }
 
-  sync(issues: ReadonlyMap<number, Issue>, showCosmetic: boolean): void {
+  sync(issues: ReadonlyMap<number, Issue>): void {
     this.sdk.Map.removeAllFeaturesFromLayer({ layerName: LAYER_NAME });
     const features = [...issues.values()]
-      .filter((issue) => showCosmetic || issue.status !== "COSMETIC")
       .map((issue) => ({
         type: "Feature" as const,
         id: `chk-${issue.segmentId}`,

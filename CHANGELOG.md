@@ -3,6 +3,14 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.5.0] - 2026-06-12
+
+### Added
+- Per-status checkboxes in the settings: choose which issue types are reported, applied everywhere at once (map layer, list, counters, next-issue navigation, edit-panel box). Counter chips remain the quick per-session filter on top.
+
+### Changed
+- The "show cosmetic differences" toggle is absorbed by the new grid (existing setting migrated automatically).
+
 ## [1.4.0] - 2026-06-12
 
 ### Changed
