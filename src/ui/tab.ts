@@ -334,8 +334,13 @@ export class TabUI {
     }
 
     header.addEventListener("click", () => {
-      if (this.expandedGroups.has(group.key)) this.expandedGroups.delete(group.key);
-      else this.expandedGroups.add(group.key);
+      const expanding = !this.expandedGroups.has(group.key);
+      if (expanding) {
+        this.expandedGroups.add(group.key);
+        this.zoomToGroup(group);
+      } else {
+        this.expandedGroups.delete(group.key);
+      }
       this.render(this.scanner.getSnapshot(), true);
     });
     box.appendChild(header);
@@ -378,6 +383,35 @@ export class TabUI {
     }
     row.addEventListener("click", () => this.selectSegment(issue.segmentId));
     return row;
+  }
+
+  /** Fit the map to every segment of the group, with padding for context. */
+  private zoomToGroup(group: IssueGroup): void {
+    let minLon = Infinity;
+    let minLat = Infinity;
+    let maxLon = -Infinity;
+    let maxLat = -Infinity;
+    for (const issue of group.issues) {
+      for (const point of issue.geometry.coordinates) {
+        const lon = point[0] as number;
+        const lat = point[1] as number;
+        minLon = Math.min(minLon, lon);
+        minLat = Math.min(minLat, lat);
+        maxLon = Math.max(maxLon, lon);
+        maxLat = Math.max(maxLat, lat);
+      }
+    }
+    if (!Number.isFinite(minLon)) return;
+    // 30% padding, with a floor so a single short segment keeps street-level context
+    const padLon = Math.max((maxLon - minLon) * 0.3, 0.001);
+    const padLat = Math.max((maxLat - minLat) * 0.3, 0.0007);
+    try {
+      this.sdk.Map.zoomToExtent({
+        bbox: [minLon - padLon, minLat - padLat, maxLon + padLon, maxLat + padLat],
+      });
+    } catch {
+      // extent issue: ignore, the rows' locate buttons still work
+    }
   }
 
   private locateSegment(issue: Issue): void {

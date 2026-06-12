@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.3.1] - 2026-06-12
+
+### Added
+- Clicking a group in the sidebar list now fits the map to the area covering every segment of the group (and expands it); clicking again collapses without moving the map.
+
 ## [1.3.0] - 2026-06-12
 
 ### Added

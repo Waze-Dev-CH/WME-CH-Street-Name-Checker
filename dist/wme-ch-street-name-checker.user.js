@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.3.0
+// @version      1.3.1
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -2126,7 +2126,7 @@ ${statusChipRules}
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"1.3.0"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"1.3.1"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -2243,8 +2243,13 @@ ${statusChipRules}
         header.appendChild(fixAllBtn);
       }
       header.addEventListener("click", () => {
-        if (this.expandedGroups.has(group.key)) this.expandedGroups.delete(group.key);
-        else this.expandedGroups.add(group.key);
+        const expanding = !this.expandedGroups.has(group.key);
+        if (expanding) {
+          this.expandedGroups.add(group.key);
+          this.zoomToGroup(group);
+        } else {
+          this.expandedGroups.delete(group.key);
+        }
         this.render(this.scanner.getSnapshot(), true);
       });
       box.appendChild(header);
@@ -2285,6 +2290,32 @@ ${statusChipRules}
       }
       row.addEventListener("click", () => this.selectSegment(issue.segmentId));
       return row;
+    }
+    /** Fit the map to every segment of the group, with padding for context. */
+    zoomToGroup(group) {
+      let minLon = Infinity;
+      let minLat = Infinity;
+      let maxLon = -Infinity;
+      let maxLat = -Infinity;
+      for (const issue of group.issues) {
+        for (const point of issue.geometry.coordinates) {
+          const lon = point[0];
+          const lat = point[1];
+          minLon = Math.min(minLon, lon);
+          minLat = Math.min(minLat, lat);
+          maxLon = Math.max(maxLon, lon);
+          maxLat = Math.max(maxLat, lat);
+        }
+      }
+      if (!Number.isFinite(minLon)) return;
+      const padLon = Math.max((maxLon - minLon) * 0.3, 1e-3);
+      const padLat = Math.max((maxLat - minLat) * 0.3, 7e-4);
+      try {
+        this.sdk.Map.zoomToExtent({
+          bbox: [minLon - padLon, minLat - padLat, maxLon + padLon, maxLat + padLat]
+        });
+      } catch {
+      }
     }
     locateSegment(issue) {
       try {
@@ -2687,7 +2718,7 @@ ${statusChipRules}
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.3.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.3.1"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();
