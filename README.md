@@ -27,12 +27,14 @@ Userscript Tampermonkey pour le [Waze Map Editor](https://www.waze.com/editor) q
 
 ## Installation
 
-1. Installer [Tampermonkey](https://www.tampermonkey.net/).
-2. Builder puis installer `dist/wme-ch-street-name-checker.user.js` (ou l'installer depuis GreasyFork une fois publié).
+1. Installer [Tampermonkey](https://www.tampermonkey.net/) (sous Chrome: activer le mode développeur dans `chrome://extensions`).
+2. [Cliquer ici pour installer le script](https://raw.githubusercontent.com/Neprena/wme-ch-street-name-checker/main/dist/wme-ch-street-name-checker.user.js) — Tampermonkey détecte le `.user.js` et propose l'installation. Les mises à jour sont ensuite automatiques (`@updateURL`).
+
+Ou depuis les sources:
 
 ```sh
 npm install
-npm run build
+npm run build   # produit dist/wme-ch-street-name-checker.user.js
 ```
 
 ## Développement
