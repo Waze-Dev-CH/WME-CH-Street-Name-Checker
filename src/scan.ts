@@ -87,6 +87,9 @@ export class Scanner {
     unsavedCount: 0,
   };
   paused = false;
+  /** Until this timestamp, map-move events do not trigger an auto-scan
+   *  (script-initiated navigation must not wipe the editor's working list). */
+  private suppressAutoScanUntil = 0;
 
   constructor(
     private sdk: WmeSDK,
@@ -96,6 +99,7 @@ export class Scanner {
 
   start(): void {
     const onMove = () => {
+      if (Date.now() < this.suppressAutoScanUntil) return;
       const s = this.settings.get();
       if (!s.enabled || !s.autoScan) return;
       this.requestScan();
@@ -105,6 +109,11 @@ export class Scanner {
     this.sdk.Events.on({ eventName: "wme-after-edit", eventHandler: () => this.reevaluate() });
     this.sdk.Events.on({ eventName: "wme-save-finished", eventHandler: () => this.reevaluate() });
     this.requestScan();
+  }
+
+  /** Ignore auto-scan triggers for a short while (script-driven map moves). */
+  suppressAutoScan(ms = 1500): void {
+    this.suppressAutoScanUntil = Date.now() + ms;
   }
 
   onUpdate(listener: (snapshot: ScanSnapshot) => void): void {

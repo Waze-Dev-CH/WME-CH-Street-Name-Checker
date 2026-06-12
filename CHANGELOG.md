@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.6.2] - 2026-06-12
+
+### Fixed
+- Clicking a group or a locate button no longer makes you lose your place: script-initiated map moves do not trigger an auto-rescan anymore (the list stays as it was), the group zoom never lands below the minimum scan zoom (that state used to clear the list entirely), and the list keeps its scroll position when results refresh.
+
 ## [1.6.1] - 2026-06-12
 
 ### Added

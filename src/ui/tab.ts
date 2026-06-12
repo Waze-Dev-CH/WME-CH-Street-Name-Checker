@@ -307,6 +307,7 @@ export class TabUI {
     visibleCount: number,
     state: ScanSnapshot["state"],
   ): void {
+    const scrollTop = this.groupsBox.scrollTop;
     this.groupsBox.replaceChildren();
     if (visibleCount === 0) {
       if (state === "done") {
@@ -319,6 +320,7 @@ export class TabUI {
     for (const group of groups) {
       this.groupsBox.appendChild(this.renderGroup(group));
     }
+    this.groupsBox.scrollTop = scrollTop;
   }
 
   private renderGroup(group: IssueGroup): HTMLElement {
@@ -409,6 +411,8 @@ export class TabUI {
 
   /** Fit the map to every segment of the group, with padding for context. */
   private zoomToGroup(group: IssueGroup): void {
+    // our own navigation must not trigger a rescan nor wipe the list
+    this.scanner.suppressAutoScan();
     let minLon = Infinity;
     let minLat = Infinity;
     let maxLon = -Infinity;
@@ -431,12 +435,18 @@ export class TabUI {
       this.sdk.Map.zoomToExtent({
         bbox: [minLon - padLon, minLat - padLat, maxLon + padLon, maxLat + padLat],
       });
+      // never land below the scan gate: that state clears the issue list
+      const minZoom = this.settings.get().minZoom;
+      if (this.sdk.Map.getZoomLevel() < minZoom) {
+        this.sdk.Map.setZoomLevel({ zoomLevel: Math.min(22, Math.max(12, minZoom)) as never });
+      }
     } catch {
       // extent issue: ignore, the rows' locate buttons still work
     }
   }
 
   private locateSegment(issue: Issue): void {
+    this.scanner.suppressAutoScan();
     try {
       this.sdk.Map.centerMapOnGeometry({ geometry: issue.geometry });
     } catch {

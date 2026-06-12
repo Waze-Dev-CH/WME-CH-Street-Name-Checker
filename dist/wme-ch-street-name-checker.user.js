@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.6.1
+// @version      1.6.2
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -1643,8 +1643,12 @@
       unsavedCount: 0
     };
     paused = false;
+    /** Until this timestamp, map-move events do not trigger an auto-scan
+     *  (script-initiated navigation must not wipe the editor's working list). */
+    suppressAutoScanUntil = 0;
     start() {
       const onMove = () => {
+        if (Date.now() < this.suppressAutoScanUntil) return;
         const s = this.settings.get();
         if (!s.enabled || !s.autoScan) return;
         this.requestScan();
@@ -1654,6 +1658,10 @@
       this.sdk.Events.on({ eventName: "wme-after-edit", eventHandler: () => this.reevaluate() });
       this.sdk.Events.on({ eventName: "wme-save-finished", eventHandler: () => this.reevaluate() });
       this.requestScan();
+    }
+    /** Ignore auto-scan triggers for a short while (script-driven map moves). */
+    suppressAutoScan(ms = 1500) {
+      this.suppressAutoScanUntil = Date.now() + ms;
     }
     onUpdate(listener) {
       this.listeners.push(listener);
@@ -2241,7 +2249,7 @@ ${statusChipRules}
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"1.6.1"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"1.6.2"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -2313,6 +2321,7 @@ ${statusChipRules}
       }
     }
     renderGroups(groups, visibleCount, state) {
+      const scrollTop = this.groupsBox.scrollTop;
       this.groupsBox.replaceChildren();
       if (visibleCount === 0) {
         if (state === "done") {
@@ -2325,6 +2334,7 @@ ${statusChipRules}
       for (const group of groups) {
         this.groupsBox.appendChild(this.renderGroup(group));
       }
+      this.groupsBox.scrollTop = scrollTop;
     }
     renderGroup(group) {
       const box = el("div", "chk-group");
@@ -2407,6 +2417,7 @@ ${statusChipRules}
     }
     /** Fit the map to every segment of the group, with padding for context. */
     zoomToGroup(group) {
+      this.scanner.suppressAutoScan();
       let minLon = Infinity;
       let minLat = Infinity;
       let maxLon = -Infinity;
@@ -2428,10 +2439,15 @@ ${statusChipRules}
         this.sdk.Map.zoomToExtent({
           bbox: [minLon - padLon, minLat - padLat, maxLon + padLon, maxLat + padLat]
         });
+        const minZoom = this.settings.get().minZoom;
+        if (this.sdk.Map.getZoomLevel() < minZoom) {
+          this.sdk.Map.setZoomLevel({ zoomLevel: Math.min(22, Math.max(12, minZoom)) });
+        }
       } catch {
       }
     }
     locateSegment(issue) {
+      this.scanner.suppressAutoScan();
       try {
         this.sdk.Map.centerMapOnGeometry({ geometry: issue.geometry });
       } catch {
@@ -2849,7 +2865,7 @@ ${statusChipRules}
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.6.1"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.6.2"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();
