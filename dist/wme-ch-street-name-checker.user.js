@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.1.6
+// @version      1.2.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -187,6 +187,23 @@
       type: String(attrs["str_type"] ?? ""),
       lines: extractLines(geometry)
     };
+  }
+  var FIND_URL = "https://api3.geo.admin.ch/rest/services/api/MapServer/find";
+  async function findStreetLinesByName(name, signal, limiter = rateLimiter) {
+    await limiter.acquire();
+    if (signal?.aborted) throw new DOMException("Scan aborted", "AbortError");
+    const params = new URLSearchParams({
+      layer: LAYER_ID,
+      searchField: "stn_label",
+      searchText: name,
+      contains: "false",
+      returnGeometry: "true",
+      geometryFormat: "geojson",
+      sr: "4326"
+    });
+    const data = await httpGetJson(`${FIND_URL}?${params.toString()}`, signal);
+    const lines = (data.results ?? []).flatMap((r) => extractLines(r.geometry) ?? []);
+    return lines.length > 0 ? lines : null;
   }
   async function fetchOfficialStreets(bbox, signal, limiter = rateLimiter) {
     const out = [];
@@ -1344,9 +1361,7 @@
     }
     return best ? { entry: best.entry, distanceM: best.minD } : null;
   }
-  function distanceToEntryM(geometry, entry) {
-    const lines = entry.street.lines;
-    if (!lines) return Infinity;
+  function distanceToLinesM(geometry, lines) {
     let min = Infinity;
     for (const point of samplePoints(geometry)) {
       for (const line of lines) {
@@ -1356,6 +1371,11 @@
       }
     }
     return min;
+  }
+  function distanceToEntryM(geometry, entry) {
+    const lines = entry.street.lines;
+    if (!lines) return Infinity;
+    return distanceToLinesM(geometry, lines);
   }
 
   // src/matching/evaluate.ts
@@ -1489,6 +1509,9 @@
   var DEBOUNCE_MS = 800;
   var BBOX_PADDING_RATIO = 0.2;
   var MAX_AREA_KM2 = 6;
+  var CONTINUATION_MAX_M = 3e3;
+  var CONTINUATION_ROAD_TYPES = /* @__PURE__ */ new Set([2, 3, 6, 7]);
+  var MAX_CONTINUATION_LOOKUPS_PER_RUN = 10;
   function padBbox(bbox) {
     const [minLon, minLat, maxLon, maxLat] = bbox;
     const padLon = (maxLon - minLon) * BBOX_PADDING_RATIO;
@@ -1520,6 +1543,8 @@
     lastSpatialIndex = null;
     /** Tile keys covered by lastIndex; segments outside are not name-checked. */
     coveredTiles = null;
+    /** Session cache: street name -> nationwide official axis polylines (or null). */
+    nameLinesCache = /* @__PURE__ */ new Map();
     listeners = [];
     snapshot = {
       state: "idle",
@@ -1684,6 +1709,8 @@
             break;
         }
       }
+      if (!await this.reclassifyContinuations(issues, stats, gen)) return false;
+      if (gen !== this.evalGeneration) return false;
       if (settings.guidelineChecks) {
         const getAddress = (segmentId) => {
           try {
@@ -1697,6 +1724,37 @@
         }
       }
       this.publish({ issues, stats, unsavedCount: this.safeUnsavedCount() });
+      return true;
+    }
+    /**
+     * Out-of-locality continuations: a NOT_FOUND name on a main road is accepted
+     * when an official axis with the exact same name exists within 3 km, e.g.
+     * "Route de Berne" between Payerne (where the register entry lives) and
+     * Corcelles-près-Payerne (out of town, no register entry).
+     * Returns false when superseded by a newer evaluation.
+     */
+    async reclassifyContinuations(issues, stats, gen) {
+      let lookups = 0;
+      for (const issue of [...issues.values()]) {
+        if (issue.status !== "NOT_FOUND" || !issue.currentName) continue;
+        if (!CONTINUATION_ROAD_TYPES.has(issue.roadType)) continue;
+        let lines = this.nameLinesCache.get(issue.currentName);
+        if (lines === void 0) {
+          if (lookups >= MAX_CONTINUATION_LOOKUPS_PER_RUN) continue;
+          lookups++;
+          try {
+            lines = await findStreetLinesByName(issue.currentName, this.controller?.signal);
+          } catch {
+            continue;
+          }
+          if (gen !== this.evalGeneration) return false;
+          this.nameLinesCache.set(issue.currentName, lines);
+        }
+        if (lines && distanceToLinesM(issue.geometry, lines) <= CONTINUATION_MAX_M) {
+          issues.delete(issue.segmentId);
+          stats.ok++;
+        }
+      }
       return true;
     }
     isCovered(segment) {
@@ -2054,7 +2112,7 @@ ${statusChipRules}
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"1.1.6"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"1.2.0"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -2615,7 +2673,7 @@ ${statusChipRules}
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.1.6"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.2.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

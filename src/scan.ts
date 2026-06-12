@@ -6,12 +6,20 @@ import { evaluateGuidelines } from "./guidelines";
 import { log } from "./log";
 import { evaluateSegment, type Issue } from "./matching/evaluate";
 import { OfficialIndex } from "./matching/official-index";
-import { nearestOfficial, SpatialIndex } from "./matching/spatial";
+import { distanceToLinesM, nearestOfficial, SpatialIndex } from "./matching/spatial";
+import { findStreetLinesByName } from "./geoadmin/client";
 import type { SettingsStore } from "./settings";
 
 const DEBOUNCE_MS = 800;
 const BBOX_PADDING_RATIO = 0.2; // covers the WME data-model buffer beyond the viewport
 const MAX_AREA_KM2 = 6;
+/** A NOT_FOUND name on a main road counts as an out-of-locality continuation
+ *  when a same-named official axis lies within this distance. */
+const CONTINUATION_MAX_M = 3000;
+/** Primary Street, Freeway, Major Highway, Minor Highway. */
+const CONTINUATION_ROAD_TYPES = new Set([2, 3, 6, 7]);
+/** Nationwide find() lookups allowed per evaluation run (fair-use safety). */
+const MAX_CONTINUATION_LOOKUPS_PER_RUN = 10;
 
 export type ScanState =
   | "idle"
@@ -66,6 +74,8 @@ export class Scanner {
   private lastSpatialIndex: SpatialIndex | null = null;
   /** Tile keys covered by lastIndex; segments outside are not name-checked. */
   private coveredTiles: Set<string> | null = null;
+  /** Session cache: street name -> nationwide official axis polylines (or null). */
+  private nameLinesCache = new Map<string, number[][][] | null>();
   private listeners: Array<(snapshot: ScanSnapshot) => void> = [];
   private snapshot: ScanSnapshot = {
     state: "idle",
@@ -258,6 +268,8 @@ export class Scanner {
           break;
       }
     }
+    if (!(await this.reclassifyContinuations(issues, stats, gen))) return false;
+    if (gen !== this.evalGeneration) return false;
     if (settings.guidelineChecks) {
       // Name issues keep precedence; guideline issues fill the remaining segments.
       const getAddress = (segmentId: number) => {
@@ -272,6 +284,42 @@ export class Scanner {
       }
     }
     this.publish({ issues, stats, unsavedCount: this.safeUnsavedCount() });
+    return true;
+  }
+
+  /**
+   * Out-of-locality continuations: a NOT_FOUND name on a main road is accepted
+   * when an official axis with the exact same name exists within 3 km, e.g.
+   * "Route de Berne" between Payerne (where the register entry lives) and
+   * Corcelles-près-Payerne (out of town, no register entry).
+   * Returns false when superseded by a newer evaluation.
+   */
+  private async reclassifyContinuations(
+    issues: Map<number, Issue>,
+    stats: ScanStats,
+    gen: number,
+  ): Promise<boolean> {
+    let lookups = 0;
+    for (const issue of [...issues.values()]) {
+      if (issue.status !== "NOT_FOUND" || !issue.currentName) continue;
+      if (!CONTINUATION_ROAD_TYPES.has(issue.roadType)) continue;
+      let lines = this.nameLinesCache.get(issue.currentName);
+      if (lines === undefined) {
+        if (lookups >= MAX_CONTINUATION_LOOKUPS_PER_RUN) continue;
+        lookups++;
+        try {
+          lines = await findStreetLinesByName(issue.currentName, this.controller?.signal);
+        } catch {
+          continue; // aborted or network error: stays NOT_FOUND, retried next scan
+        }
+        if (gen !== this.evalGeneration) return false;
+        this.nameLinesCache.set(issue.currentName, lines);
+      }
+      if (lines && distanceToLinesM(issue.geometry, lines) <= CONTINUATION_MAX_M) {
+        issues.delete(issue.segmentId);
+        stats.ok++;
+      }
+    }
     return true;
   }
 

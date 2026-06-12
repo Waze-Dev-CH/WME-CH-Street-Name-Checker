@@ -181,10 +181,8 @@ export function nearestOfficial(
   return best ? { entry: best.entry, distanceM: best.minD } : null;
 }
 
-/** Minimal distance from the sample points to one specific official street. */
-export function distanceToEntryM(geometry: LineString, entry: IndexedEntry): number {
-  const lines = entry.street.lines;
-  if (!lines) return Infinity;
+/** Minimal distance from the sample points to a set of polylines. */
+export function distanceToLinesM(geometry: LineString, lines: number[][][]): number {
   let min = Infinity;
   for (const point of samplePoints(geometry)) {
     for (const line of lines) {
@@ -194,4 +192,11 @@ export function distanceToEntryM(geometry: LineString, entry: IndexedEntry): num
     }
   }
   return min;
+}
+
+/** Minimal distance from the sample points to one specific official street. */
+export function distanceToEntryM(geometry: LineString, entry: IndexedEntry): number {
+  const lines = entry.street.lines;
+  if (!lines) return Infinity;
+  return distanceToLinesM(geometry, lines);
 }

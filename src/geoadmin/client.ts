@@ -130,6 +130,35 @@ export function parseAttributes(
   };
 }
 
+const FIND_URL = "https://api3.geo.admin.ch/rest/services/api/MapServer/find";
+
+/**
+ * Nationwide exact-name lookup (case-sensitive), returning the merged axis
+ * polylines of every register entry bearing that name. Used to recognize
+ * out-of-locality continuations of cantonal/national roads whose register
+ * entry belongs to the neighboring commune.
+ */
+export async function findStreetLinesByName(
+  name: string,
+  signal?: AbortSignal,
+  limiter: RateLimiter = rateLimiter,
+): Promise<number[][][] | null> {
+  await limiter.acquire();
+  if (signal?.aborted) throw new DOMException("Scan aborted", "AbortError");
+  const params = new URLSearchParams({
+    layer: LAYER_ID,
+    searchField: "stn_label",
+    searchText: name,
+    contains: "false",
+    returnGeometry: "true",
+    geometryFormat: "geojson",
+    sr: "4326",
+  });
+  const data = (await httpGetJson(`${FIND_URL}?${params.toString()}`, signal)) as IdentifyResponse;
+  const lines = (data.results ?? []).flatMap((r) => extractLines(r.geometry) ?? []);
+  return lines.length > 0 ? lines : null;
+}
+
 /**
  * Fetch all official street entries intersecting the bbox (WGS84),
  * paging through the identify endpoint until a short page is returned.

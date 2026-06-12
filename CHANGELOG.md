@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.2.0] - 2026-06-12
+
+### Added
+- Out-of-locality continuation check: a NOT_FOUND name on a main road (Primary Street, Minor/Major Highway, Freeway) is accepted when an official axis with the exact same name exists within 3 km, via a cached nationwide exact-name lookup (max 10 new lookups per scan). Fixes "Route de Berne" in Corcelles-près-Payerne being flagged although the register entry belongs to neighboring Payerne and the GeoNV register does not name out-of-town stretches.
+
 ## [1.1.6] - 2026-06-12
 
 ### Fixed
