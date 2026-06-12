@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="WME CH Street Name Checker" width="440">
+</p>
+
 # WME CH Street Name Checker
 
 **[➜ Installer / Installieren / Installa / Install](https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js)** · [Changelog](CHANGELOG.md) · Licence MIT · © Data: swisstopo
