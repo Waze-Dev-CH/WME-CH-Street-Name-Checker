@@ -16,7 +16,7 @@ describe("mapGeoAdminUrl", () => {
     expect(url).toContain("map.geo.admin.ch");
     expect(url).toContain("lang=fr");
     expect(url).toContain("ch.swisstopo.amtliches-strassenverzeichnis");
-    expect(url).toMatch(/E=26000\d\d/);
-    expect(url).toMatch(/N=12001\d\d/);
+    expect(url).toMatch(/E=25999\d\d/);
+    expect(url).toMatch(/N=120002\d/);
   });
 });
