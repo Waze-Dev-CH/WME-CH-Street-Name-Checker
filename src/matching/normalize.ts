@@ -75,6 +75,45 @@ const ARTICLES = new Set([
   "di", "da", "del", "della", "delle", "dei", "degli", "al", "alla", "ai",
 ]);
 
+/**
+ * Way-type words (odonym types) for stem matching: a Waze "Chemin de la Guérite"
+ * whose official name is "Route de la Guérite" shares the stem "guerite".
+ * Applied to K2 keys (lowercase, accents folded, abbreviations expanded).
+ */
+const WAY_TYPE_WORDS = new Set([
+  // fr
+  "rue", "route", "chemin", "avenue", "boulevard", "impasse", "sentier", "passage",
+  "place", "promenade", "quai", "ruelle", "allee", "faubourg", "esplanade", "montee",
+  "clos", "square",
+  // it
+  "via", "viale", "vicolo", "piazza", "piazzetta", "strada", "sentiero", "corso",
+  "salita", "riva",
+]);
+
+/** German way-type suffixes glued to single-token names (Bahnhofstrasse / Bahnhofweg). */
+const GERMAN_SUFFIXES = /^(.{4,}?)(strasse|weg|gasse|platz)$/;
+
+/**
+ * Stem of a K2 key: the name without its way-type word and without articles.
+ * "chemin de la guerite" -> "guerite"; "bahnhofweg" -> "bahnhof".
+ * Returns null when there is no recognizable way type or the stem is too short.
+ */
+export function stemKey(key: string): string | null {
+  const tokens = key.split(" ");
+  let rest: string[] | null = null;
+  const first = tokens[0];
+  if (tokens.length >= 2 && first !== undefined && WAY_TYPE_WORDS.has(first)) {
+    rest = tokens.slice(1);
+  } else if (tokens.length === 1 && first !== undefined) {
+    const m = first.match(GERMAN_SUFFIXES);
+    if (m && m[1] !== undefined) rest = [m[1]];
+  }
+  if (!rest || rest.length === 0) return null;
+  const cleaned = rest.filter((t) => !ARTICLES.has(t)).map((t) => t.replace(/^[ld]'/, ""));
+  const stem = (cleaned.length > 0 ? cleaned : rest).join(" ");
+  return stem.length >= 3 ? stem : null;
+}
+
 /** Article-stripped form of a K2 key; null when stripping would leave < 2 tokens. */
 export function stripArticles(key: string): string | null {
   const tokens = key

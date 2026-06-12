@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { foldAccents, k0, k1, k2 } from "../src/matching/normalize";
+import { foldAccents, k0, k1, k2, stemKey } from "../src/matching/normalize";
 
 describe("k0", () => {
   it("trims and NFC-normalizes", () => {
@@ -51,6 +51,25 @@ describe("foldAccents", () => {
   });
 });
 
+
+
+describe("stemKey", () => {
+  it("strips the way type and articles", () => {
+    expect(stemKey("chemin de la guerite")).toBe("guerite");
+    expect(stemKey("route de la guerite")).toBe("guerite");
+    expect(stemKey("avenue du general guisan")).toBe("general guisan");
+  });
+
+  it("strips German glued suffixes", () => {
+    expect(stemKey("bahnhofstrasse")).toBe("bahnhof");
+    expect(stemKey("bahnhofweg")).toBe("bahnhof");
+  });
+
+  it("returns null without a recognizable way type", () => {
+    expect(stemKey("la bricoleta")).toBeNull();
+    expect(stemKey("weg")).toBeNull();
+  });
+});
 
 describe("article-insensitive K2 variants", () => {
   const intersects = (a: string, b: string): boolean =>

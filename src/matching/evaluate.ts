@@ -8,6 +8,7 @@ export type IssueStatus =
   | "COSMETIC"
   | "VARIANT"
   | "NEAR"
+  | "WRONG_TYPE"
   | "WRONG_CITY"
   | "NOT_FOUND"
   | "UNNAMED"
@@ -112,7 +113,12 @@ export function evaluateSegment(
       }
       return { kind: "ok" };
     }
-    const statusByLevel = { cosmetic: "COSMETIC", variant: "VARIANT", near: "NEAR" } as const;
+    const statusByLevel = {
+      cosmetic: "COSMETIC",
+      variant: "VARIANT",
+      near: "NEAR",
+      stem: "WRONG_TYPE",
+    } as const;
     return {
       kind: "issue",
       issue: {

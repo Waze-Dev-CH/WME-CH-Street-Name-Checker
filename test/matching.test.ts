@@ -104,6 +104,45 @@ describe("fuzzy ambiguity", () => {
   });
 });
 
+describe("way-type stem matching (WRONG_TYPE)", () => {
+  it("matches a wrong way type when the stem is unique", () => {
+    const local = new OfficialIndex([makeOfficial("Route de la Guérite")]);
+    const m = local.lookup("Chemin de la Guérite");
+    expect(m?.level).toBe("stem");
+    expect(m?.entry.namePart).toBe("Route de la Guérite");
+  });
+
+  it("matches German glued suffixes", () => {
+    const local = new OfficialIndex([makeOfficial("Bahnhofstrasse")]);
+    const m = local.lookup("Bahnhofweg");
+    expect(m?.level).toBe("stem");
+    expect(m?.entry.namePart).toBe("Bahnhofstrasse");
+  });
+
+  it("stays unmatched when two officials share the stem", () => {
+    const local = new OfficialIndex([
+      makeOfficial("Route du Moulin"),
+      makeOfficial("Rue du Moulin"),
+    ]);
+    expect(local.lookup("Chemin du Moulin")).toBeNull();
+  });
+
+  it("still groups multi-commune duplicates of the same name", () => {
+    const local = new OfficialIndex([
+      makeOfficial("Route de la Guérite", { zipLabel: "1580 Avenches" }),
+      makeOfficial("Route de la Guérite", { zipLabel: "1595 Faoug" }),
+    ]);
+    const m = local.lookup("Chemin de la Guérite");
+    expect(m?.level).toBe("stem");
+    expect(m?.candidates).toHaveLength(2);
+  });
+
+  it("does not fire without a recognizable way type", () => {
+    const local = new OfficialIndex([makeOfficial("Route de la Guérite")]);
+    expect(local.lookup("La Bricoleta")).toBeNull();
+  });
+});
+
 describe("bilingual slash labels", () => {
   const index = new OfficialIndex(BIEL_STREETS);
 

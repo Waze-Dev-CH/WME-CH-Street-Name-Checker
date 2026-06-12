@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      0.5.0
+// @version      0.6.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -267,6 +267,7 @@
     legendCOSMETIC: "typography only (case, apostrophe, spacing) — dashed line",
     legendVARIANT: "abbreviation, missing accent or article; official spelling suggested",
     legendNEAR: "probable typo; one close official name found",
+    legendWRONG_TYPE: "different way type (Chemin ↔ Route); unique official name suggested",
     legendWRONG_CITY: "name exists, but in another locality (city scoping)",
     legendNOT_FOUND: "not found in the official register",
     legendUNNAMED: "checked road type without a street name — dashed line",
@@ -329,6 +330,7 @@
     legendCOSMETIC: "typographie uniquement (casse, apostrophe, espaces) — trait pointillé",
     legendVARIANT: "abréviation, accent ou article manquant; orthographe officielle proposée",
     legendNEAR: "faute de frappe probable; un seul nom officiel proche",
+    legendWRONG_TYPE: "type de voie différent (Chemin ↔ Route); nom officiel unique proposé",
     legendWRONG_CITY: "le nom existe, mais dans une autre localité (scoping)",
     legendNOT_FOUND: "introuvable dans le répertoire officiel",
     legendUNNAMED: "type de route vérifié sans nom — trait pointillé",
@@ -391,6 +393,7 @@
     legendCOSMETIC: "nur Typografie (Gross-/Kleinschreibung, Apostroph, Leerzeichen) — gestrichelt",
     legendVARIANT: "Abkürzung, fehlender Akzent oder Artikel; amtliche Schreibweise vorgeschlagen",
     legendNEAR: "wahrscheinlicher Tippfehler; ein einziger naher amtlicher Name",
+    legendWRONG_TYPE: "anderer Strassentyp (Weg ↔ Strasse); eindeutiger amtlicher Name vorgeschlagen",
     legendWRONG_CITY: "Name existiert, aber in einer anderen Ortschaft (Scoping)",
     legendNOT_FOUND: "nicht im amtlichen Verzeichnis",
     legendUNNAMED: "geprüfter Strassentyp ohne Namen — gestrichelt",
@@ -453,6 +456,7 @@
     legendCOSMETIC: "solo tipografia (maiuscole, apostrofo, spazi) — linea tratteggiata",
     legendVARIANT: "abbreviazione, accento o articolo mancante; proposta la grafia ufficiale",
     legendNEAR: "probabile errore di battitura; un solo nome ufficiale vicino",
+    legendWRONG_TYPE: "tipo di via diverso (Chemin ↔ Route); proposto il nome ufficiale unico",
     legendWRONG_CITY: "il nome esiste, ma in un'altra località (scoping)",
     legendNOT_FOUND: "non presente nel repertorio ufficiale",
     legendUNNAMED: "tipo di strada verificato senza nome — linea tratteggiata",
@@ -517,6 +521,7 @@
     COSMETIC: { strokeColor: "#f7c948", strokeDashstyle: "dash" },
     VARIANT: { strokeColor: "#f7c948", strokeDashstyle: "solid" },
     NEAR: { strokeColor: "#ff8c00", strokeDashstyle: "solid" },
+    WRONG_TYPE: { strokeColor: "#ff5722", strokeDashstyle: "dash" },
     WRONG_CITY: { strokeColor: "#ff5ca8", strokeDashstyle: "solid" },
     NOT_FOUND: { strokeColor: "#e02020", strokeDashstyle: "solid" },
     UNNAMED: { strokeColor: "#9b59b6", strokeDashstyle: "dash" },
@@ -705,6 +710,54 @@
     "alla",
     "ai"
   ]);
+  var WAY_TYPE_WORDS = /* @__PURE__ */ new Set([
+    // fr
+    "rue",
+    "route",
+    "chemin",
+    "avenue",
+    "boulevard",
+    "impasse",
+    "sentier",
+    "passage",
+    "place",
+    "promenade",
+    "quai",
+    "ruelle",
+    "allee",
+    "faubourg",
+    "esplanade",
+    "montee",
+    "clos",
+    "square",
+    // it
+    "via",
+    "viale",
+    "vicolo",
+    "piazza",
+    "piazzetta",
+    "strada",
+    "sentiero",
+    "corso",
+    "salita",
+    "riva"
+  ]);
+  var GERMAN_SUFFIXES = /^(.{4,}?)(strasse|weg|gasse|platz)$/;
+  function stemKey(key) {
+    const tokens = key.split(" ");
+    let rest = null;
+    const first = tokens[0];
+    if (tokens.length >= 2 && first !== void 0 && WAY_TYPE_WORDS.has(first)) {
+      rest = tokens.slice(1);
+    } else if (tokens.length === 1 && first !== void 0) {
+      const m = first.match(GERMAN_SUFFIXES);
+      if (m && m[1] !== void 0) rest = [m[1]];
+    }
+    if (!rest || rest.length === 0) return null;
+    const cleaned = rest.filter((t2) => !ARTICLES.has(t2)).map((t2) => t2.replace(/^[ld]'/, ""));
+    const stem = (cleaned.length > 0 ? cleaned : rest).join(" ");
+    return stem.length >= 3 ? stem : null;
+  }
   function stripArticles(key) {
     const tokens = key.split(" ").filter((token) => !ARTICLES.has(token)).map((token) => token.replace(/^[ld]'/, ""));
     if (tokens.length < 2) return null;
@@ -787,7 +840,12 @@
         }
         return { kind: "ok" };
       }
-      const statusByLevel = { cosmetic: "COSMETIC", variant: "VARIANT", near: "NEAR" };
+      const statusByLevel = {
+        cosmetic: "COSMETIC",
+        variant: "VARIANT",
+        near: "NEAR",
+        stem: "WRONG_TYPE"
+      };
       return {
         kind: "issue",
         issue: {
@@ -888,6 +946,8 @@
     byK2 = /* @__PURE__ */ new Map();
     /** Buckets by first character of the folded K2 key, for bounded fuzzy search. */
     fuzzyBuckets = /* @__PURE__ */ new Map();
+    /** Stem (name minus way-type word and articles) -> entries, for WRONG_TYPE detection. */
+    byStem = /* @__PURE__ */ new Map();
     entryCount;
     streetCount;
     constructor(streets) {
@@ -914,6 +974,8 @@
             const candidate = { entry, key: primary };
             if (bucket) bucket.push(candidate);
             else this.fuzzyBuckets.set(bucketKey, [candidate]);
+            const stem = stemKey(primary);
+            if (stem) pushTo(this.byStem, stem, entry);
           }
         });
       }
@@ -933,7 +995,24 @@
         const variant = this.byK2.get(key);
         if (variant) return this.result("variant", variant, locality);
       }
-      return this.fuzzyLookup(name, locality);
+      return this.fuzzyLookup(name, locality) ?? this.stemLookup(name, locality);
+    }
+    /**
+     * Way-type mismatch: same stem, different type word ("Chemin de la Guérite"
+     * vs official "Route de la Guérite"). Only suggests when every candidate
+     * carries the SAME official name — two officials sharing a stem (e.g.
+     * "Rue du Moulin" and "Route du Moulin") stay ambiguous and unmatched.
+     */
+    stemLookup(name, locality) {
+      const primary = k2(name)[0];
+      if (!primary) return null;
+      const stem = stemKey(primary);
+      if (!stem) return null;
+      const candidates = this.byStem.get(stem);
+      if (!candidates) return null;
+      const distinctNames = new Set(candidates.map((c) => k1(c.namePart)));
+      if (distinctNames.size !== 1) return null;
+      return this.result("stem", candidates, locality);
     }
     fuzzyLookup(name, locality) {
       const queryKey = k2(name)[0];
@@ -1359,6 +1438,7 @@ ${statusChipRules}
     COSMETIC: "legendCOSMETIC",
     VARIANT: "legendVARIANT",
     NEAR: "legendNEAR",
+    WRONG_TYPE: "legendWRONG_TYPE",
     WRONG_CITY: "legendWRONG_CITY",
     NOT_FOUND: "legendNOT_FOUND",
     UNNAMED: "legendUNNAMED",
@@ -1479,7 +1559,7 @@ ${statusChipRules}
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"0.5.0"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"0.6.0"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/wme-ch-street-name-checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -1819,7 +1899,7 @@ ${statusChipRules}
     const tab = new TabUI(sdk2, scanner, settings);
     await tab.init();
     scanner.start();
-    log.info(`v${"0.5.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"0.6.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

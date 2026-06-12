@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.6.0] - 2026-06-12
+
+### Added
+- `WRONG_TYPE` status: detects a wrong way-type word when the rest of the name is unique in the area ("Chemin de la Guérite" -> official "Route de la Guérite" in Avenches; "Bahnhofweg" -> "Bahnhofstrasse"). One-click fixable. Ambiguous stems (e.g. both "Rue du Moulin" and "Route du Moulin" exist) are deliberately left unmatched.
+
 ## [0.5.0] - 2026-06-12
 
 ### Fixed

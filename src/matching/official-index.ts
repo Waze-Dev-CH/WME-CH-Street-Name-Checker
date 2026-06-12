@@ -1,6 +1,6 @@
 import type { OfficialStreet } from "../geoadmin/types";
 import { damerauLevenshtein } from "./distance";
-import { foldAccents, k0, k1, k2 } from "./normalize";
+import { foldAccents, k0, k1, k2, stemKey } from "./normalize";
 
 /** One indexed name: a full official label, or one side of a bilingual "A/B" label. */
 export interface IndexedEntry {
@@ -13,7 +13,7 @@ export interface IndexedEntry {
   locality: string;
 }
 
-export type MatchLevel = "exact" | "cosmetic" | "variant" | "near";
+export type MatchLevel = "exact" | "cosmetic" | "variant" | "near" | "stem";
 
 export interface MatchResult {
   level: MatchLevel;
@@ -65,6 +65,8 @@ export class OfficialIndex {
   private byK2 = new Map<string, IndexedEntry[]>();
   /** Buckets by first character of the folded K2 key, for bounded fuzzy search. */
   private fuzzyBuckets = new Map<string, FuzzyCandidate[]>();
+  /** Stem (name minus way-type word and articles) -> entries, for WRONG_TYPE detection. */
+  private byStem = new Map<string, IndexedEntry[]>();
   readonly entryCount: number;
   readonly streetCount: number;
 
@@ -94,6 +96,8 @@ export class OfficialIndex {
           const candidate = { entry, key: primary };
           if (bucket) bucket.push(candidate);
           else this.fuzzyBuckets.set(bucketKey, [candidate]);
+          const stem = stemKey(primary);
+          if (stem) pushTo(this.byStem, stem, entry);
         }
       });
     }
@@ -117,7 +121,25 @@ export class OfficialIndex {
       if (variant) return this.result("variant", variant, locality);
     }
 
-    return this.fuzzyLookup(name, locality);
+    return this.fuzzyLookup(name, locality) ?? this.stemLookup(name, locality);
+  }
+
+  /**
+   * Way-type mismatch: same stem, different type word ("Chemin de la Guérite"
+   * vs official "Route de la Guérite"). Only suggests when every candidate
+   * carries the SAME official name — two officials sharing a stem (e.g.
+   * "Rue du Moulin" and "Route du Moulin") stay ambiguous and unmatched.
+   */
+  private stemLookup(name: string, locality?: string): MatchResult | null {
+    const primary = k2(name)[0];
+    if (!primary) return null;
+    const stem = stemKey(primary);
+    if (!stem) return null;
+    const candidates = this.byStem.get(stem);
+    if (!candidates) return null;
+    const distinctNames = new Set(candidates.map((c) => k1(c.namePart)));
+    if (distinctNames.size !== 1) return null;
+    return this.result("stem", candidates, locality);
   }
 
   private fuzzyLookup(name: string, locality?: string): MatchResult | null {

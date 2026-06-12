@@ -28,6 +28,7 @@ Compare les noms de rues des segments visibles avec le **répertoire officiel de
 | `COSMETIC` | Différence typographique (apostrophe, casse, espaces) | jaune pointillé |
 | `VARIANT` | Abréviation, accent ou article manquant (Av. → Avenue, Chemin de Montaz → Chemin de la Montaz) | jaune |
 | `NEAR` | Probable faute de frappe, suggestion unique | orange |
+| `WRONG_TYPE` | Type de voie différent (Chemin de la Guérite → Route de la Guérite), radical unique dans le secteur | orange foncé pointillé |
 | `WRONG_CITY` | Le nom existe, mais dans une autre localité (mode scoping) | rose |
 | `NOT_FOUND` | Introuvable dans le répertoire officiel | rouge |
 | `UNNAMED` | Segment vérifiable sans nom | violet pointillé |
@@ -66,6 +67,7 @@ Vergleicht die Strassennamen der sichtbaren Segmente mit dem **amtlichen Strasse
 | `COSMETIC` | Nur Typografie (Apostroph, Gross-/Kleinschreibung, Leerzeichen) | gelb gestrichelt |
 | `VARIANT` | Abkürzung, fehlender Akzent oder Artikel (Bahnhofstr. → Bahnhofstrasse) | gelb |
 | `NEAR` | Wahrscheinlicher Tippfehler, eindeutiger Vorschlag | orange |
+| `WRONG_TYPE` | Anderer Strassentyp (Bahnhofweg → Bahnhofstrasse), eindeutiger Namensstamm in der Umgebung | dunkelorange gestrichelt |
 | `WRONG_CITY` | Name existiert, aber in anderer Ortschaft (Scoping-Modus) | rosa |
 | `NOT_FOUND` | Nicht im amtlichen Verzeichnis | rot |
 | `UNNAMED` | Geprüfter Strassentyp ohne Namen | violett gestrichelt |
@@ -104,6 +106,7 @@ Confronta i nomi delle strade dei segmenti visibili con il **repertorio ufficial
 | `COSMETIC` | Solo tipografia (apostrofo, maiuscole, spazi) | giallo tratteggiato |
 | `VARIANT` | Abbreviazione, accento o articolo mancante | giallo |
 | `NEAR` | Probabile errore di battitura, proposta unica | arancione |
+| `WRONG_TYPE` | Tipo di via diverso (Chemin → Route), radice unica nella zona | arancione scuro tratteggiato |
 | `WRONG_CITY` | Il nome esiste, ma in un'altra località (scoping) | rosa |
 | `NOT_FOUND` | Assente dal repertorio ufficiale | rosso |
 | `UNNAMED` | Tipo verificato senza nome | viola tratteggiato |
@@ -142,6 +145,7 @@ Compares the street names of visible segments with the Swiss federal **official 
 | `COSMETIC` | Typography only (apostrophe, case, spacing) | dashed yellow |
 | `VARIANT` | Abbreviation, missing accent or article | yellow |
 | `NEAR` | Probable typo, unique suggestion | orange |
+| `WRONG_TYPE` | Different way type (Chemin de la Guérite → Route de la Guérite), unique stem in the area | dashed dark orange |
 | `WRONG_CITY` | Name exists, but in another locality (scoping mode) | pink |
 | `NOT_FOUND` | Not in the official register | red |
 | `UNNAMED` | Checked road type without a name | dashed violet |

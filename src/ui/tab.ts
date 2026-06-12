@@ -15,6 +15,7 @@ const LEGEND_KEYS: Record<IssueStatus, StringKey> = {
   COSMETIC: "legendCOSMETIC",
   VARIANT: "legendVARIANT",
   NEAR: "legendNEAR",
+  WRONG_TYPE: "legendWRONG_TYPE",
   WRONG_CITY: "legendWRONG_CITY",
   NOT_FOUND: "legendNOT_FOUND",
   UNNAMED: "legendUNNAMED",
