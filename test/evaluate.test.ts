@@ -2,6 +2,7 @@ import type { LineString } from "geojson";
 import type { Segment, SegmentAddress } from "wme-sdk-typings";
 import { describe, expect, it } from "vitest";
 import { evaluateSegment } from "../src/matching/evaluate";
+import { nearestOfficial, SpatialIndex } from "../src/matching/spatial";
 import { OfficialIndex } from "../src/matching/official-index";
 import { DEFAULT_SETTINGS, type Settings } from "../src/settings";
 import { LAUSANNE_STREETS, makeOfficial } from "./fixtures/swiss-names";
@@ -162,5 +163,118 @@ describe("evaluateSegment", () => {
       settings,
     );
     expect(v.kind).toBe("ok");
+  });
+});
+
+describe("geometry matching", () => {
+  const LAT = 46.52;
+  const axis = (label: string, northMeters: number, overrides = {}) =>
+    makeOfficial(label, {
+      lines: [
+        [
+          [6.6, LAT + northMeters / 110_574],
+          [6.61, LAT + northMeters / 110_574],
+        ],
+      ],
+      ...overrides,
+    });
+  const segGeometry = (northMeters: number): LineString => ({
+    type: "LineString",
+    coordinates: [
+      [6.602, LAT + northMeters / 110_574],
+      [6.604, LAT + northMeters / 110_574],
+      [6.606, LAT + northMeters / 110_574],
+      [6.608, LAT + northMeters / 110_574],
+    ],
+  });
+  const nearestFor = (officials: ReturnType<typeof makeOfficial>[], north: number) => {
+    const idx = new OfficialIndex(officials);
+    return {
+      idx,
+      nearest: nearestOfficial(segGeometry(north), new SpatialIndex(idx.list)),
+    };
+  };
+
+  it("UNNAMED gets a fixable suggestion from the street underneath", () => {
+    const { idx, nearest } = nearestFor([axis("Route de la Guérite", 0)], 8);
+    const v = evaluateSegment(
+      makeSegment({ geometry: segGeometry(8) } as Partial<Segment>),
+      makeAddress(null),
+      idx,
+      settings,
+      nearest,
+    );
+    expect(v.kind).toBe("issue");
+    if (v.kind === "issue") {
+      expect(v.issue.status).toBe("UNNAMED");
+      expect(v.issue.suggestion).toBe("Route de la Guérite");
+      expect(v.issue.fixable).toBe(true);
+    }
+  });
+
+  it("flags WRONG_STREET when the name is official far away but another street is underneath", () => {
+    const officials = [
+      axis("Route de Berne", 0),
+      // the segment's name exists officially, but 200 m north
+      axis("Chemin du Lac", 200),
+    ];
+    const { idx, nearest } = nearestFor(officials, 5);
+    const v = evaluateSegment(
+      makeSegment({ geometry: segGeometry(5) } as Partial<Segment>),
+      makeAddress("Chemin du Lac"),
+      idx,
+      settings,
+      nearest,
+    );
+    expect(v.kind).toBe("issue");
+    if (v.kind === "issue") {
+      expect(v.issue.status).toBe("WRONG_STREET");
+      expect(v.issue.suggestion).toBe("Route de Berne");
+    }
+  });
+
+  it("does NOT flag WRONG_STREET when the named street is also nearby (corner case)", () => {
+    const officials = [axis("Route de Berne", 0), axis("Chemin du Lac", 20)];
+    const { idx, nearest } = nearestFor(officials, 5);
+    const v = evaluateSegment(
+      makeSegment({ geometry: segGeometry(5) } as Partial<Segment>),
+      makeAddress("Chemin du Lac"),
+      idx,
+      settings,
+      nearest,
+    );
+    expect(v.kind).toBe("ok");
+  });
+
+  it("disambiguates a stem tie using the street underneath", () => {
+    // two officials share the stem "moulin": set-based lookup stays ambiguous
+    const officials = [axis("Route du Moulin", 0), axis("Rue du Moulin", 200)];
+    const { idx, nearest } = nearestFor(officials, 5);
+    const v = evaluateSegment(
+      makeSegment({ geometry: segGeometry(5) } as Partial<Segment>),
+      makeAddress("Chemin du Moulin"),
+      idx,
+      settings,
+      nearest,
+    );
+    expect(v.kind).toBe("issue");
+    if (v.kind === "issue") {
+      expect(v.issue.status).toBe("WRONG_TYPE");
+      expect(v.issue.suggestion).toBe("Route du Moulin");
+    }
+  });
+
+  it("keeps the v0.8 behavior without nearest (geometry matching off)", () => {
+    const officials = [axis("Route du Moulin", 0), axis("Rue du Moulin", 200)];
+    const idx = new OfficialIndex(officials);
+    const v = evaluateSegment(
+      makeSegment({ geometry: segGeometry(5) } as Partial<Segment>),
+      makeAddress("Chemin du Moulin"),
+      idx,
+      settings,
+      null,
+    );
+    expect(v.kind).toBe("issue");
+    if (v.kind === "issue") expect(v.issue.status).toBe("NOT_FOUND");
   });
 });

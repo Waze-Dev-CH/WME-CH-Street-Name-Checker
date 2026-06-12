@@ -3,7 +3,8 @@ import type { Bbox, OfficialStreet } from "./types";
 
 /** ~1.6 x 2.2 km at Swiss latitudes; a viewport at working zoom spans a few tiles. */
 export const TILE_SIZE_DEG = 0.02;
-const CACHE_MAX_TILES = 300;
+// Tiles now carry geometries (~5-10x heavier); cap accordingly (~400 km² coverage).
+const CACHE_MAX_TILES = 120;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // register is refreshed daily
 
 export function tileKeysForBbox(bbox: Bbox): string[] {

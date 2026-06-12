@@ -15,6 +15,7 @@ export const STATUS_STYLES: Record<IssueStatus, StatusStyle> = {
   VARIANT: { strokeColor: "#f7c948", strokeDashstyle: "solid" },
   NEAR: { strokeColor: "#ff8c00", strokeDashstyle: "solid" },
   WRONG_TYPE: { strokeColor: "#ff5722", strokeDashstyle: "dash" },
+  WRONG_STREET: { strokeColor: "#b71c1c", strokeDashstyle: "solid" },
   WRONG_CITY: { strokeColor: "#ff5ca8", strokeDashstyle: "solid" },
   NOT_FOUND: { strokeColor: "#e02020", strokeDashstyle: "solid" },
   UNNAMED: { strokeColor: "#9b59b6", strokeDashstyle: "dash" },

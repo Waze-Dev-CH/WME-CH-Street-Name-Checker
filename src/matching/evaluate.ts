@@ -2,13 +2,15 @@ import type { LineString } from "geojson";
 import type { Segment, SegmentAddress } from "wme-sdk-typings";
 import type { Settings } from "../settings";
 import { k1 } from "./normalize";
-import type { IndexedEntry, OfficialIndex } from "./official-index";
+import { compareNameToCandidate, type IndexedEntry, type OfficialIndex } from "./official-index";
+import { distanceToEntryM, FAR_STREET_M, NEAR_STREET_M, type NearestResult } from "./spatial";
 
 export type IssueStatus =
   | "COSMETIC"
   | "VARIANT"
   | "NEAR"
   | "WRONG_TYPE"
+  | "WRONG_STREET"
   | "WRONG_CITY"
   | "NOT_FOUND"
   | "UNNAMED"
@@ -64,6 +66,8 @@ export function evaluateSegment(
   address: SegmentAddress,
   index: OfficialIndex,
   settings: Settings,
+  /** Official street under the segment (geometry matching), when available. */
+  nearest: NearestResult | null = null,
 ): Verdict {
   if (!settings.checkedRoadTypes.includes(segment.roadType)) return { kind: "skipped" };
 
@@ -81,14 +85,17 @@ export function evaluateSegment(
   if (!currentName) {
     // Unnamed roundabout segments are normal in Waze.
     if (segment.junctionId !== null) return { kind: "skipped" };
+    // With geometry matching, the official street under the segment becomes
+    // a one-click suggestion.
+    const suggestion = nearest && nearest.distanceM <= NEAR_STREET_M ? nearest.entry : null;
     return {
       kind: "issue",
       issue: {
         ...baseIssue,
         status: "UNNAMED",
-        suggestion: null,
-        note: null,
-        fixable: false,
+        suggestion: suggestion?.namePart ?? null,
+        note: suggestion ? noteFor(suggestion) : null,
+        fixable: suggestion !== null,
       },
     };
   }
@@ -99,6 +106,28 @@ export function evaluateSegment(
   const match = index.lookup(currentName, locality);
   if (match) {
     if (match.level === "exact") {
+      // Geometry check: the name is official somewhere, but is it the street
+      // actually under this segment? Only flag when the matched street is
+      // clearly far away AND another official street is clearly underneath.
+      if (
+        nearest &&
+        nearest.distanceM <= NEAR_STREET_M &&
+        k1(nearest.entry.namePart) !== k1(currentName) &&
+        !nearest.entry.street.label.includes(currentName) &&
+        Math.min(...match.candidates.map((c) => distanceToEntryM(segment.geometry, c))) >
+          FAR_STREET_M
+      ) {
+        return {
+          kind: "issue",
+          issue: {
+            ...baseIssue,
+            status: "WRONG_STREET",
+            suggestion: nearest.entry.namePart,
+            note: { ...(noteFor(nearest.entry) ?? {}), existsIn: match.entry.street.zipLabel },
+            fixable: true,
+          },
+        };
+      }
       if (locality && !match.inLocality) {
         return {
           kind: "issue",
@@ -139,6 +168,31 @@ export function evaluateSegment(
       if (altMatch && (altMatch.level === "exact" || altMatch.level === "cosmetic")) {
         return { kind: "okAlt" };
       }
+    }
+  }
+
+  // Last chance before NOT_FOUND: one-to-one comparison against the official
+  // street under the segment. Resolves cases the set-based lookup dropped as
+  // ambiguous (two stems or two fuzzy candidates) — proximity disambiguates.
+  if (nearest && nearest.distanceM <= NEAR_STREET_M) {
+    const level = compareNameToCandidate(currentName, nearest.entry.namePart);
+    if (level && level !== "exact") {
+      const statusByLevel = {
+        cosmetic: "COSMETIC",
+        variant: "VARIANT",
+        near: "NEAR",
+        stem: "WRONG_TYPE",
+      } as const;
+      return {
+        kind: "issue",
+        issue: {
+          ...baseIssue,
+          status: statusByLevel[level],
+          suggestion: nearest.entry.namePart,
+          note: noteFor(nearest.entry),
+          fixable: true,
+        },
+      };
     }
   }
 

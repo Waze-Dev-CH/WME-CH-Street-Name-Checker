@@ -16,6 +16,12 @@ export interface OfficialStreet {
   status: string;
   /** Entry type: Strasse/Platz/Benanntes Gebiet (str_type). */
   type: string;
+  /**
+   * Street axis polylines in WGS84 [lon, lat], extracted from the register
+   * geometry (MultiLineString or GeometryCollection). Null for entries without
+   * line geometry (named areas are polygons and are deliberately not kept).
+   */
+  lines: number[][][] | null;
 }
 
 /** [minLon, minLat, maxLon, maxLat] in WGS84. */

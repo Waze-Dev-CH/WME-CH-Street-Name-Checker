@@ -47,6 +47,8 @@ export interface Settings {
   language: LanguagePreference;
   guidelineChecks: boolean;
   editPanelHelper: boolean;
+  /** Use official street geometries to match segments spatially. */
+  geometryMatching: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -63,6 +65,7 @@ export const DEFAULT_SETTINGS: Settings = {
   language: "auto",
   guidelineChecks: true,
   editPanelHelper: true,
+  geometryMatching: true,
 };
 
 const STORAGE_KEY = "wme-ch-name-check.settings";

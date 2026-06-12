@@ -71,10 +71,41 @@ async function httpGetJson(url: string, signal?: AbortSignal): Promise<unknown> 
 }
 
 interface IdentifyResponse {
-  results?: Array<{ attributes?: Record<string, unknown> }>;
+  results?: Array<{ attributes?: Record<string, unknown>; geometry?: unknown }>;
 }
 
-export function parseAttributes(attrs: Record<string, unknown> | undefined): OfficialStreet | null {
+interface GeoJsonLike {
+  type?: string;
+  coordinates?: unknown;
+  geometries?: GeoJsonLike[];
+}
+
+/**
+ * Extract line geometries (street axes). Real register data mixes
+ * MultiLineString, GeometryCollection of MultiLineStrings, and MultiPolygon
+ * (named areas) — polygons are dropped on purpose.
+ */
+export function extractLines(geometry: unknown): number[][][] | null {
+  const g = geometry as GeoJsonLike | undefined;
+  if (!g || typeof g !== "object") return null;
+  switch (g.type) {
+    case "LineString":
+      return Array.isArray(g.coordinates) ? [g.coordinates as number[][]] : null;
+    case "MultiLineString":
+      return Array.isArray(g.coordinates) ? (g.coordinates as number[][][]) : null;
+    case "GeometryCollection": {
+      const lines = (g.geometries ?? []).flatMap((sub) => extractLines(sub) ?? []);
+      return lines.length > 0 ? lines : null;
+    }
+    default:
+      return null;
+  }
+}
+
+export function parseAttributes(
+  attrs: Record<string, unknown> | undefined,
+  geometry?: unknown,
+): OfficialStreet | null {
   if (!attrs) return null;
   const esid = Number(attrs["str_esid"]);
   const label = attrs["stn_label"];
@@ -89,6 +120,7 @@ export function parseAttributes(attrs: Record<string, unknown> | undefined): Off
     official: official === 1 || official === true || official === "true",
     status: String(attrs["str_status"] ?? ""),
     type: String(attrs["str_type"] ?? ""),
+    lines: extractLines(geometry),
   };
 }
 
@@ -111,14 +143,18 @@ export async function fetchOfficialStreets(
       sr: "4326",
       layers: `all:${LAYER_ID}`,
       tolerance: "0",
-      returnGeometry: "false",
+      // Geometries are always fetched (measured ~400 KB on the densest
+      // Lausanne tile) so the tile cache stays coherent whatever the
+      // geometry-matching setting; evaluation decides whether to use them.
+      returnGeometry: "true",
+      geometryFormat: "geojson",
       limit: String(PAGE_SIZE),
       offset: String(page * PAGE_SIZE),
     });
     const data = (await httpGetJson(`${BASE_URL}?${params.toString()}`, signal)) as IdentifyResponse;
     const results = data.results ?? [];
     for (const r of results) {
-      const street = parseAttributes(r.attributes);
+      const street = parseAttributes(r.attributes, r.geometry);
       if (street) out.push(street);
     }
     if (results.length < PAGE_SIZE) return out;

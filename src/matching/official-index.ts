@@ -2,6 +2,32 @@ import type { OfficialStreet } from "../geoadmin/types";
 import { damerauLevenshtein } from "./distance";
 import { foldAccents, k0, k1, k2, stemKey } from "./normalize";
 
+/**
+ * One-to-one comparison of a Waze name against a single candidate (typically
+ * the official street under the segment): same cascade as the index lookup
+ * but without ambiguity concerns, since the candidate is spatially determined.
+ */
+export function compareNameToCandidate(
+  query: string,
+  candidate: string,
+): "exact" | "cosmetic" | "variant" | "near" | "stem" | null {
+  if (k0(query) === k0(candidate)) return "exact";
+  if (k1(query) === k1(candidate)) return "cosmetic";
+  const queryKeys = k2(query);
+  const candidateKeys = k2(candidate);
+  if (queryKeys.some((key) => candidateKeys.includes(key))) return "variant";
+  const q = queryKeys[0];
+  const c = candidateKeys[0];
+  if (q && c) {
+    const maxDist = q.length < 8 ? 1 : 2;
+    if (damerauLevenshtein(q, c, maxDist) <= maxDist) return "near";
+    const qs = stemKey(q);
+    const cs = stemKey(c);
+    if (qs && cs && qs === cs) return "stem";
+  }
+  return null;
+}
+
 /** One indexed name: a full official label, or one side of a bilingual "A/B" label. */
 export interface IndexedEntry {
   street: OfficialStreet;
@@ -67,6 +93,7 @@ export class OfficialIndex {
   private fuzzyBuckets = new Map<string, FuzzyCandidate[]>();
   /** Stem (name minus way-type word and articles) -> entries, for WRONG_TYPE detection. */
   private byStem = new Map<string, IndexedEntry[]>();
+  private all: IndexedEntry[] = [];
   readonly entryCount: number;
   readonly streetCount: number;
 
@@ -85,6 +112,7 @@ export class OfficialIndex {
           locality,
         };
         entries++;
+        this.all.push(entry);
         pushTo(this.byK0, k0(namePart), entry);
         pushTo(this.byK1, k1(namePart), entry);
         const k2Keys = k2(namePart);
@@ -103,6 +131,11 @@ export class OfficialIndex {
     }
     this.entryCount = entries;
     this.streetCount = streets.length;
+  }
+
+  /** Every indexed name (full labels and slash parts). */
+  get list(): readonly IndexedEntry[] {
+    return this.all;
   }
 
   /**

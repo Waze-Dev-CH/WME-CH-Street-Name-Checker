@@ -23,6 +23,7 @@ export const LEGEND_KEYS: Record<IssueStatus, StringKey> = {
   VARIANT: "legendVARIANT",
   NEAR: "legendNEAR",
   WRONG_TYPE: "legendWRONG_TYPE",
+  WRONG_STREET: "legendWRONG_STREET",
   WRONG_CITY: "legendWRONG_CITY",
   NOT_FOUND: "legendNOT_FOUND",
   UNNAMED: "legendUNNAMED",
@@ -499,6 +500,7 @@ export class TabUI {
         | "keepOldNameAsAlt"
         | "guidelineChecks"
         | "editPanelHelper"
+        | "geometryMatching"
       >,
       titleKey?: StringKey,
     ): HTMLElement => {
@@ -520,6 +522,7 @@ export class TabUI {
     details.appendChild(toggle("keepOldName", "keepOldNameAsAlt", "keepOldNameTitle"));
     details.appendChild(toggle("guidelineChecks", "guidelineChecks", "guidelineChecksTitle"));
     details.appendChild(toggle("helperSetting", "editPanelHelper"));
+    details.appendChild(toggle("geometryMatching", "geometryMatching", "geometryMatchingTitle"));
 
     const scopingRow = el("div", "chk-settings-row");
     scopingRow.appendChild(el("span", "", t("scopingLabel")));

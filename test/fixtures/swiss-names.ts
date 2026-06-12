@@ -12,6 +12,7 @@ export function makeOfficial(label: string, overrides: Partial<OfficialStreet> =
     official: true,
     status: "bestehend",
     type: "Strasse",
+    lines: null,
     ...overrides,
   };
 }

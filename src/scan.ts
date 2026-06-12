@@ -6,6 +6,7 @@ import { evaluateGuidelines } from "./guidelines";
 import { log } from "./log";
 import { evaluateSegment, type Issue } from "./matching/evaluate";
 import { OfficialIndex } from "./matching/official-index";
+import { nearestOfficial, SpatialIndex } from "./matching/spatial";
 import type { SettingsStore } from "./settings";
 
 const DEBOUNCE_MS = 800;
@@ -60,6 +61,7 @@ export class Scanner {
   private controller: AbortController | null = null;
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private lastIndex: OfficialIndex | null = null;
+  private lastSpatialIndex: SpatialIndex | null = null;
   /** Tile keys covered by lastIndex; segments outside are not name-checked. */
   private coveredTiles: Set<string> | null = null;
   private listeners: Array<(snapshot: ScanSnapshot) => void> = [];
@@ -123,6 +125,7 @@ export class Scanner {
   rescan(): void {
     this.fetcher.cache.clear();
     this.lastIndex = null;
+    this.lastSpatialIndex = null;
     this.coveredTiles = null;
     this.requestScan();
   }
@@ -176,6 +179,7 @@ export class Scanner {
       this.publish({ state: "evaluating", progress: null });
       const index = new OfficialIndex(streets);
       this.lastIndex = index;
+      this.lastSpatialIndex = new SpatialIndex(index.list);
       this.coveredTiles = new Set(tileKeysForBbox(bbox));
       this.evaluateAll(index);
       this.publish({ state: "done", officialStreetCount: index.streetCount });
@@ -203,7 +207,11 @@ export class Scanner {
       let verdict;
       try {
         const address = this.sdk.DataModel.Segments.getAddress({ segmentId: segment.id });
-        verdict = evaluateSegment(segment, address, index, settings);
+        const nearest =
+          settings.geometryMatching && this.lastSpatialIndex
+            ? nearestOfficial(segment.geometry, this.lastSpatialIndex)
+            : null;
+        verdict = evaluateSegment(segment, address, index, settings, nearest);
       } catch {
         stats.skipped++;
         continue;

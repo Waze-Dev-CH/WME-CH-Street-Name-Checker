@@ -19,6 +19,7 @@ Compare les noms de rues des segments visibles avec le **répertoire officiel de
 - Encadré dans le panneau d'édition: à la sélection d'un segment, verdict du scan (statut, explication, suggestion) avec boutons Corriger / Tout corriger (désactivable).
 - Interrupteurs en tête d'onglet: "Actif" (coupe tout: scan, couche, encadré) et "Scan auto" (désactivé = scan manuel via Rescanner). Décocher la couche masque aussi l'encadré.
 - Correction 1-clic par segment ou par groupe (cap 25, confirmation au-delà de 5). **Rien n'est sauvegardé automatiquement**: les modifications entrent dans la pile d'édition WME, tu relis et sauves toi-même (Ctrl+S, undo natif).
+- Matching géométrique (désactivable): les axes officiels sont appariés spatialement aux segments — suggestions 1-clic pour les segments sans nom, détection de la mauvaise rue, désambiguïsation par distance.
 - Communes bilingues (Biel/Bienne…): les libellés officiels `A/B` sont acceptés en entier et pour chaque partie; un nom alternatif Waze qui correspond compte comme OK (réglable).
 - Contrôles des règles d'édition de Suisse romande (sans donnée externe, désactivables): micro-segments, boucles à 1-2 segments, mauvais usage du type Rue étroite. Statuts informatifs, sans correction automatique.
 - Réglages persistants: types de routes vérifiés, scoping par localité (off/warn/strict), labels carte, zoom minimal, conservation de l'ancien nom en alternatif, langue.
@@ -31,6 +32,7 @@ Compare les noms de rues des segments visibles avec le **répertoire officiel de
 | `VARIANT` | Abréviation, accent ou article manquant (Av. → Avenue, Chemin de Montaz → Chemin de la Montaz) | jaune |
 | `NEAR` | Probable faute de frappe, suggestion unique | orange |
 | `WRONG_TYPE` | Type de voie différent (Chemin de la Guérite → Route de la Guérite), radical unique dans le secteur | orange foncé pointillé |
+| `WRONG_STREET` | Nom valide, mais la rue officielle sous le segment porte un autre nom | rouge foncé |
 | `WRONG_CITY` | Le nom existe, mais dans une autre localité (mode scoping) | rose |
 | `NOT_FOUND` | Introuvable dans le répertoire officiel | rouge |
 | `UNNAMED` | Segment vérifiable sans nom | violet pointillé |
@@ -60,6 +62,7 @@ Vergleicht die Strassennamen der sichtbaren Segmente mit dem **amtlichen Strasse
 - Box im Bearbeitungspanel: bei Auswahl eines Segments erscheint das Scan-Ergebnis (Status, Erklärung, Vorschlag) mit Korrigieren / Alle korrigieren (abschaltbar).
 - Hauptschalter oben im Tab: "Aktiv" (deaktiviert alles) und "Auto-Scan" (aus = nur manuell per Neu scannen). Eine deaktivierte Ebene blendet auch die Box aus.
 - 1-Klick-Korrektur pro Segment oder Gruppe (max. 25, Bestätigung ab 5). **Nichts wird automatisch gespeichert**: Änderungen landen im WME-Bearbeitungsstapel — prüfen und selbst speichern (Ctrl+S, natives Undo).
+- Geometrie-Matching (abschaltbar): amtliche Strassenachsen werden räumlich den Segmenten zugeordnet — 1-Klick-Vorschläge für unbenannte Segmente, Falsche-Strasse-Erkennung, Distanz-Disambiguierung.
 - Zweisprachige Gemeinden (Biel/Bienne…): amtliche `A/B`-Bezeichnungen werden als Ganzes und je Teil akzeptiert; ein passender Alternativname zählt als OK (einstellbar).
 - Schweizer Regelprüfungen (ohne externe Daten, abschaltbar): Mikrosegmente, Schleifen aus 1-2 Segmenten, falsch verwendete enge Strassen. Nur informativ, keine automatische Korrektur.
 - Persistente Einstellungen: geprüfte Strassentypen, Ortschafts-Scoping, Kartenbeschriftung, Mindestzoom, alten Namen als Alternative behalten, Sprache.
@@ -72,6 +75,7 @@ Vergleicht die Strassennamen der sichtbaren Segmente mit dem **amtlichen Strasse
 | `VARIANT` | Abkürzung, fehlender Akzent oder Artikel (Bahnhofstr. → Bahnhofstrasse) | gelb |
 | `NEAR` | Wahrscheinlicher Tippfehler, eindeutiger Vorschlag | orange |
 | `WRONG_TYPE` | Anderer Strassentyp (Bahnhofweg → Bahnhofstrasse), eindeutiger Namensstamm in der Umgebung | dunkelorange gestrichelt |
+| `WRONG_STREET` | Gültiger Name, aber die amtliche Strasse unter dem Segment heisst anders | dunkelrot |
 | `WRONG_CITY` | Name existiert, aber in anderer Ortschaft (Scoping-Modus) | rosa |
 | `NOT_FOUND` | Nicht im amtlichen Verzeichnis | rot |
 | `UNNAMED` | Geprüfter Strassentyp ohne Namen | violett gestrichelt |
@@ -101,6 +105,7 @@ Confronta i nomi delle strade dei segmenti visibili con il **repertorio ufficial
 - Riquadro nel pannello di modifica: selezionando un segmento appare il verdetto della scansione (stato, spiegazione, proposta) con Correggi / Correggi tutti (disattivabile).
 - Interruttori in cima alla scheda: "Attivo" (disattiva tutto) e "Scansione auto" (off = solo manuale con Riscansiona). Nascondere il livello nasconde anche il riquadro.
 - Correzione in 1 clic per segmento o per gruppo (max 25, conferma oltre 5). **Nulla viene salvato automaticamente**: le modifiche entrano nello stack di WME — rivedi e salva tu stesso (Ctrl+S, undo nativo).
+- Matching geometrico (disattivabile): gli assi ufficiali sono abbinati spazialmente ai segmenti — suggerimenti in 1 clic per i segmenti senza nome, rilevamento della strada errata, disambiguazione per distanza.
 - Comuni bilingui (Biel/Bienne…): le denominazioni ufficiali `A/B` sono accettate per intero e per ciascuna parte; un nome alternativo corrispondente conta come OK (regolabile).
 - Controlli delle regole svizzere (senza dati esterni, disattivabili): micro-segmenti, anelli di 1-2 segmenti, uso scorretto del tipo Strada stretta. Solo informativi, nessuna correzione automatica.
 - Impostazioni persistenti: tipi di strada verificati, scoping per località, etichette sulla mappa, zoom minimo, mantenere il vecchio nome come alternativo, lingua.
@@ -113,6 +118,7 @@ Confronta i nomi delle strade dei segmenti visibili con il **repertorio ufficial
 | `VARIANT` | Abbreviazione, accento o articolo mancante | giallo |
 | `NEAR` | Probabile errore di battitura, proposta unica | arancione |
 | `WRONG_TYPE` | Tipo di via diverso (Chemin → Route), radice unica nella zona | arancione scuro tratteggiato |
+| `WRONG_STREET` | Nome valido, ma la strada ufficiale sotto il segmento ha un altro nome | rosso scuro |
 | `WRONG_CITY` | Il nome esiste, ma in un'altra località (scoping) | rosa |
 | `NOT_FOUND` | Assente dal repertorio ufficiale | rosso |
 | `UNNAMED` | Tipo verificato senza nome | viola tratteggiato |
@@ -142,6 +148,7 @@ Compares the street names of visible segments with the Swiss federal **official 
 - Box in the edit panel: selecting a segment shows the scan verdict (status, explanation, suggestion) with Fix / Fix all buttons (toggleable).
 - Master toggles at the top of the tab: "Enabled" (turns everything off) and "Auto scan" (off = manual Rescan only). Unchecking the layer also hides the box.
 - One-click fix per segment or per group (capped at 25, confirmation above 5). **Nothing is ever auto-saved**: edits go into the WME edit stack — review and save yourself (Ctrl+S, native undo).
+- Geometry matching (toggleable): official street axes are matched spatially against segments — one-click suggestions for unnamed segments, wrong-street detection, distance disambiguation.
 - Bilingual communes (Biel/Bienne…): official `A/B` labels accepted as a whole and per part; a matching alternate name counts as OK (configurable).
 - Swiss guideline checks (no external data, toggleable): micro-segments, 1-2 segment loops, Narrow Street misuse. Informational only, no automatic fix.
 - Persistent settings: checked road types, city scoping, map labels, minimum zoom, keep old name as alternate, language.
@@ -154,6 +161,7 @@ Compares the street names of visible segments with the Swiss federal **official 
 | `VARIANT` | Abbreviation, missing accent or article | yellow |
 | `NEAR` | Probable typo, unique suggestion | orange |
 | `WRONG_TYPE` | Different way type (Chemin de la Guérite → Route de la Guérite), unique stem in the area | dashed dark orange |
+| `WRONG_STREET` | Valid name, but the official street under the segment has another name | dark red |
 | `WRONG_CITY` | Name exists, but in another locality (scoping mode) | pink |
 | `NOT_FOUND` | Not in the official register | red |
 | `UNNAMED` | Checked road type without a name | dashed violet |

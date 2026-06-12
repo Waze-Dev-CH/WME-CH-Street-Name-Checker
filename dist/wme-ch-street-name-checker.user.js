@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      0.9.0
+// @version      1.0.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -91,7 +91,23 @@
       throw err;
     }
   }
-  function parseAttributes(attrs) {
+  function extractLines(geometry) {
+    const g = geometry;
+    if (!g || typeof g !== "object") return null;
+    switch (g.type) {
+      case "LineString":
+        return Array.isArray(g.coordinates) ? [g.coordinates] : null;
+      case "MultiLineString":
+        return Array.isArray(g.coordinates) ? g.coordinates : null;
+      case "GeometryCollection": {
+        const lines = (g.geometries ?? []).flatMap((sub) => extractLines(sub) ?? []);
+        return lines.length > 0 ? lines : null;
+      }
+      default:
+        return null;
+    }
+  }
+  function parseAttributes(attrs, geometry) {
     if (!attrs) return null;
     const esid = Number(attrs["str_esid"]);
     const label = attrs["stn_label"];
@@ -105,7 +121,8 @@
       comFosnr: Number(attrs["com_fosnr"] ?? 0),
       official: official === 1 || official === true || official === "true",
       status: String(attrs["str_status"] ?? ""),
-      type: String(attrs["str_type"] ?? "")
+      type: String(attrs["str_type"] ?? ""),
+      lines: extractLines(geometry)
     };
   }
   async function fetchOfficialStreets(bbox, signal, limiter = rateLimiter) {
@@ -119,14 +136,18 @@
         sr: "4326",
         layers: `all:${LAYER_ID}`,
         tolerance: "0",
-        returnGeometry: "false",
+        // Geometries are always fetched (measured ~400 KB on the densest
+        // Lausanne tile) so the tile cache stays coherent whatever the
+        // geometry-matching setting; evaluation decides whether to use them.
+        returnGeometry: "true",
+        geometryFormat: "geojson",
         limit: String(PAGE_SIZE),
         offset: String(page * PAGE_SIZE)
       });
       const data = await httpGetJson(`${BASE_URL}?${params.toString()}`, signal);
       const results = data.results ?? [];
       for (const r of results) {
-        const street = parseAttributes(r.attributes);
+        const street = parseAttributes(r.attributes, r.geometry);
         if (street) out.push(street);
       }
       if (results.length < PAGE_SIZE) return out;
@@ -137,7 +158,7 @@
 
   // src/geoadmin/tiles.ts
   var TILE_SIZE_DEG = 0.02;
-  var CACHE_MAX_TILES = 300;
+  var CACHE_MAX_TILES = 120;
   var CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
   function tileKeysForBbox(bbox) {
     const [minLon, minLat, maxLon, maxLat] = bbox;
@@ -273,6 +294,9 @@
     legendVARIANT: "abbreviation, missing accent or article; official spelling suggested",
     legendNEAR: "probable typo; one close official name found",
     legendWRONG_TYPE: "different way type (Chemin ↔ Route); unique official name suggested",
+    legendWRONG_STREET: "valid name, but the official street underneath has another name",
+    geometryMatching: "Geometry matching (official street under the segment)",
+    geometryMatchingTitle: "Enables UNNAMED suggestions, wrong-street detection and disambiguation by distance",
     legendWRONG_CITY: "name exists, but in another locality (city scoping)",
     legendNOT_FOUND: "not found in the official register",
     legendUNNAMED: "checked road type without a street name — dashed line",
@@ -343,6 +367,9 @@
     legendVARIANT: "abréviation, accent ou article manquant; orthographe officielle proposée",
     legendNEAR: "faute de frappe probable; un seul nom officiel proche",
     legendWRONG_TYPE: "type de voie différent (Chemin ↔ Route); nom officiel unique proposé",
+    legendWRONG_STREET: "nom valide, mais la rue officielle dessous porte un autre nom",
+    geometryMatching: "Matching géométrique (rue officielle sous le segment)",
+    geometryMatchingTitle: "Active les suggestions UNNAMED, la détection de mauvaise rue et la désambiguïsation par distance",
     legendWRONG_CITY: "le nom existe, mais dans une autre localité (scoping)",
     legendNOT_FOUND: "introuvable dans le répertoire officiel",
     legendUNNAMED: "type de route vérifié sans nom — trait pointillé",
@@ -413,6 +440,9 @@
     legendVARIANT: "Abkürzung, fehlender Akzent oder Artikel; amtliche Schreibweise vorgeschlagen",
     legendNEAR: "wahrscheinlicher Tippfehler; ein einziger naher amtlicher Name",
     legendWRONG_TYPE: "anderer Strassentyp (Weg ↔ Strasse); eindeutiger amtlicher Name vorgeschlagen",
+    legendWRONG_STREET: "gültiger Name, aber die amtliche Strasse darunter heisst anders",
+    geometryMatching: "Geometrie-Matching (amtliche Strasse unter dem Segment)",
+    geometryMatchingTitle: "Aktiviert UNNAMED-Vorschläge, Falsche-Strasse-Erkennung und Distanz-Disambiguierung",
     legendWRONG_CITY: "Name existiert, aber in einer anderen Ortschaft (Scoping)",
     legendNOT_FOUND: "nicht im amtlichen Verzeichnis",
     legendUNNAMED: "geprüfter Strassentyp ohne Namen — gestrichelt",
@@ -483,6 +513,9 @@
     legendVARIANT: "abbreviazione, accento o articolo mancante; proposta la grafia ufficiale",
     legendNEAR: "probabile errore di battitura; un solo nome ufficiale vicino",
     legendWRONG_TYPE: "tipo di via diverso (Chemin ↔ Route); proposto il nome ufficiale unico",
+    legendWRONG_STREET: "nome valido, ma la strada ufficiale sottostante ha un altro nome",
+    geometryMatching: "Matching geometrico (strada ufficiale sotto il segmento)",
+    geometryMatchingTitle: "Attiva i suggerimenti UNNAMED, il rilevamento di strada errata e la disambiguazione per distanza",
     legendWRONG_CITY: "il nome esiste, ma in un'altra località (scoping)",
     legendNOT_FOUND: "non presente nel repertorio ufficiale",
     legendUNNAMED: "tipo di strada verificato senza nome — linea tratteggiata",
@@ -550,6 +583,7 @@
     VARIANT: { strokeColor: "#f7c948", strokeDashstyle: "solid" },
     NEAR: { strokeColor: "#ff8c00", strokeDashstyle: "solid" },
     WRONG_TYPE: { strokeColor: "#ff5722", strokeDashstyle: "dash" },
+    WRONG_STREET: { strokeColor: "#b71c1c", strokeDashstyle: "solid" },
     WRONG_CITY: { strokeColor: "#ff5ca8", strokeDashstyle: "solid" },
     NOT_FOUND: { strokeColor: "#e02020", strokeDashstyle: "solid" },
     UNNAMED: { strokeColor: "#9b59b6", strokeDashstyle: "dash" },
@@ -887,99 +921,6 @@
     return keys;
   }
 
-  // src/matching/evaluate.ts
-  function noteFor(entry) {
-    const note = {};
-    if (!entry.street.official) note.unofficial = true;
-    const status = entry.street.status.toLowerCase();
-    if (status !== "" && status !== "bestehend" && status !== "real" && status !== "existing") {
-      note.planned = true;
-    }
-    if (entry.isSlashPart) note.fullLabel = entry.street.label;
-    return Object.keys(note).length > 0 ? note : null;
-  }
-  function evaluateSegment(segment, address, index, settings) {
-    if (!settings.checkedRoadTypes.includes(segment.roadType)) return { kind: "skipped" };
-    const currentName = address.street?.name?.trim() || null;
-    const baseIssue = {
-      segmentId: segment.id,
-      currentName,
-      cityId: address.city?.id ?? null,
-      cityName: address.city?.name ?? null,
-      roadType: segment.roadType,
-      length: segment.length,
-      geometry: segment.geometry
-    };
-    if (!currentName) {
-      if (segment.junctionId !== null) return { kind: "skipped" };
-      return {
-        kind: "issue",
-        issue: {
-          ...baseIssue,
-          status: "UNNAMED",
-          suggestion: null,
-          note: null,
-          fixable: false
-        }
-      };
-    }
-    const locality = settings.cityScoping !== "off" && address.city?.name ? k1(address.city.name) : void 0;
-    const match = index.lookup(currentName, locality);
-    if (match) {
-      if (match.level === "exact") {
-        if (locality && !match.inLocality) {
-          return {
-            kind: "issue",
-            issue: {
-              ...baseIssue,
-              status: "WRONG_CITY",
-              suggestion: null,
-              note: { existsIn: match.entry.street.zipLabel },
-              fixable: false
-            }
-          };
-        }
-        return { kind: "ok" };
-      }
-      const statusByLevel = {
-        cosmetic: "COSMETIC",
-        variant: "VARIANT",
-        near: "NEAR",
-        stem: "WRONG_TYPE"
-      };
-      return {
-        kind: "issue",
-        issue: {
-          ...baseIssue,
-          status: statusByLevel[match.level],
-          suggestion: match.entry.namePart,
-          note: noteFor(match.entry),
-          fixable: true
-        }
-      };
-    }
-    if (settings.altNameCountsAsOk) {
-      for (const alt of address.altStreets) {
-        const altName = alt.street?.name?.trim();
-        if (!altName) continue;
-        const altMatch = index.lookup(altName, locality);
-        if (altMatch && (altMatch.level === "exact" || altMatch.level === "cosmetic")) {
-          return { kind: "okAlt" };
-        }
-      }
-    }
-    return {
-      kind: "issue",
-      issue: {
-        ...baseIssue,
-        status: "NOT_FOUND",
-        suggestion: null,
-        note: null,
-        fixable: false
-      }
-    };
-  }
-
   // src/matching/distance.ts
   function damerauLevenshtein(a, b, maxDist) {
     if (a === b) return 0;
@@ -1019,6 +960,23 @@
   }
 
   // src/matching/official-index.ts
+  function compareNameToCandidate(query, candidate) {
+    if (k0(query) === k0(candidate)) return "exact";
+    if (k1(query) === k1(candidate)) return "cosmetic";
+    const queryKeys = k2(query);
+    const candidateKeys = k2(candidate);
+    if (queryKeys.some((key) => candidateKeys.includes(key))) return "variant";
+    const q = queryKeys[0];
+    const c = candidateKeys[0];
+    if (q && c) {
+      const maxDist = q.length < 8 ? 1 : 2;
+      if (damerauLevenshtein(q, c, maxDist) <= maxDist) return "near";
+      const qs = stemKey(q);
+      const cs = stemKey(c);
+      if (qs && cs && qs === cs) return "stem";
+    }
+    return null;
+  }
   function localityFromZipLabel(zipLabel) {
     return k1(zipLabel.replace(/^\d{4}\s*/, ""));
   }
@@ -1049,6 +1007,7 @@
     fuzzyBuckets = /* @__PURE__ */ new Map();
     /** Stem (name minus way-type word and articles) -> entries, for WRONG_TYPE detection. */
     byStem = /* @__PURE__ */ new Map();
+    all = [];
     entryCount;
     streetCount;
     constructor(streets) {
@@ -1064,6 +1023,7 @@
             locality
           };
           entries++;
+          this.all.push(entry);
           pushTo(this.byK0, k0(namePart), entry);
           pushTo(this.byK1, k1(namePart), entry);
           const k2Keys = k2(namePart);
@@ -1082,6 +1042,10 @@
       }
       this.entryCount = entries;
       this.streetCount = streets.length;
+    }
+    /** Every indexed name (full labels and slash parts). */
+    get list() {
+      return this.all;
     }
     /**
      * Cascade lookup: K0 exact -> K1 cosmetic -> K2 variant -> bounded fuzzy.
@@ -1150,6 +1114,256 @@
     }
   };
 
+  // src/matching/spatial.ts
+  var M_PER_DEG_LAT = 110574;
+  var M_PER_DEG_LON_EQUATOR = 111320;
+  var GRID_DEG = 1e-3;
+  var NEAR_STREET_M = 25;
+  var FAR_STREET_M = 40;
+  function distancePointToSegmentM(p, a, b) {
+    const lonScale = M_PER_DEG_LON_EQUATOR * Math.cos(p[1] * Math.PI / 180);
+    const px = p[0] * lonScale;
+    const py = p[1] * M_PER_DEG_LAT;
+    const ax = a[0] * lonScale;
+    const ay = a[1] * M_PER_DEG_LAT;
+    const bx = b[0] * lonScale;
+    const by = b[1] * M_PER_DEG_LAT;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lengthSq = dx * dx + dy * dy;
+    let t2 = 0;
+    if (lengthSq > 0) {
+      t2 = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lengthSq));
+    }
+    const cx = ax + t2 * dx;
+    const cy = ay + t2 * dy;
+    return Math.hypot(px - cx, py - cy);
+  }
+  var SpatialIndex = class {
+    grid = /* @__PURE__ */ new Map();
+    size;
+    /** Only full-label entries are indexed (slash parts share the same geometry). */
+    constructor(entries) {
+      let count = 0;
+      for (const entry of entries) {
+        if (entry.isSlashPart) continue;
+        const lines = entry.street.lines;
+        if (!lines) continue;
+        for (const line of lines) {
+          for (let i = 0; i + 1 < line.length; i++) {
+            const a = line[i];
+            const b = line[i + 1];
+            count++;
+            const seg = { entry, a, b };
+            const x0 = Math.floor(Math.min(a[0], b[0]) / GRID_DEG);
+            const x1 = Math.floor(Math.max(a[0], b[0]) / GRID_DEG);
+            const y0 = Math.floor(Math.min(a[1], b[1]) / GRID_DEG);
+            const y1 = Math.floor(Math.max(a[1], b[1]) / GRID_DEG);
+            for (let x = x0; x <= x1; x++) {
+              for (let y = y0; y <= y1; y++) {
+                const key = `${x}:${y}`;
+                const cell = this.grid.get(key);
+                if (cell) cell.push(seg);
+                else this.grid.set(key, [seg]);
+              }
+            }
+          }
+        }
+      }
+      this.size = count;
+    }
+    /** Closest official street to the point, within maxMeters (3×3 cell search). */
+    nearest(point, maxMeters) {
+      const cx = Math.floor(point[0] / GRID_DEG);
+      const cy = Math.floor(point[1] / GRID_DEG);
+      let best = null;
+      for (let x = cx - 1; x <= cx + 1; x++) {
+        for (let y = cy - 1; y <= cy + 1; y++) {
+          for (const seg of this.grid.get(`${x}:${y}`) ?? []) {
+            const d = distancePointToSegmentM(point, seg.a, seg.b);
+            if (d <= maxMeters && (!best || d < best.distanceM)) {
+              best = { entry: seg.entry, distanceM: d };
+            }
+          }
+        }
+      }
+      return best;
+    }
+  };
+  function samplePoints(geometry) {
+    const coords = geometry.coordinates;
+    if (coords.length === 0) return [];
+    if (coords.length <= 2) {
+      const a = coords[0];
+      const b = coords[coords.length - 1] ?? a;
+      return [[(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]];
+    }
+    const at = (f) => coords[Math.floor((coords.length - 1) * f)];
+    return [at(0.25), at(0.5), at(0.75)];
+  }
+  function nearestOfficial(geometry, index, maxMeters = NEAR_STREET_M) {
+    const votes = /* @__PURE__ */ new Map();
+    for (const point of samplePoints(geometry)) {
+      const hit = index.nearest(point, maxMeters);
+      if (!hit) continue;
+      const esid = hit.entry.street.esid;
+      const vote = votes.get(esid);
+      if (vote) {
+        vote.count++;
+        vote.minD = Math.min(vote.minD, hit.distanceM);
+      } else {
+        votes.set(esid, { entry: hit.entry, count: 1, minD: hit.distanceM });
+      }
+    }
+    let best = null;
+    for (const vote of votes.values()) {
+      if (!best || vote.count > best.count || vote.count === best.count && vote.minD < best.minD) {
+        best = vote;
+      }
+    }
+    return best ? { entry: best.entry, distanceM: best.minD } : null;
+  }
+  function distanceToEntryM(geometry, entry) {
+    const lines = entry.street.lines;
+    if (!lines) return Infinity;
+    let min = Infinity;
+    for (const point of samplePoints(geometry)) {
+      for (const line of lines) {
+        for (let i = 0; i + 1 < line.length; i++) {
+          min = Math.min(min, distancePointToSegmentM(point, line[i], line[i + 1]));
+        }
+      }
+    }
+    return min;
+  }
+
+  // src/matching/evaluate.ts
+  function noteFor(entry) {
+    const note = {};
+    if (!entry.street.official) note.unofficial = true;
+    const status = entry.street.status.toLowerCase();
+    if (status !== "" && status !== "bestehend" && status !== "real" && status !== "existing") {
+      note.planned = true;
+    }
+    if (entry.isSlashPart) note.fullLabel = entry.street.label;
+    return Object.keys(note).length > 0 ? note : null;
+  }
+  function evaluateSegment(segment, address, index, settings, nearest = null) {
+    if (!settings.checkedRoadTypes.includes(segment.roadType)) return { kind: "skipped" };
+    const currentName = address.street?.name?.trim() || null;
+    const baseIssue = {
+      segmentId: segment.id,
+      currentName,
+      cityId: address.city?.id ?? null,
+      cityName: address.city?.name ?? null,
+      roadType: segment.roadType,
+      length: segment.length,
+      geometry: segment.geometry
+    };
+    if (!currentName) {
+      if (segment.junctionId !== null) return { kind: "skipped" };
+      const suggestion = nearest && nearest.distanceM <= NEAR_STREET_M ? nearest.entry : null;
+      return {
+        kind: "issue",
+        issue: {
+          ...baseIssue,
+          status: "UNNAMED",
+          suggestion: suggestion?.namePart ?? null,
+          note: suggestion ? noteFor(suggestion) : null,
+          fixable: suggestion !== null
+        }
+      };
+    }
+    const locality = settings.cityScoping !== "off" && address.city?.name ? k1(address.city.name) : void 0;
+    const match = index.lookup(currentName, locality);
+    if (match) {
+      if (match.level === "exact") {
+        if (nearest && nearest.distanceM <= NEAR_STREET_M && k1(nearest.entry.namePart) !== k1(currentName) && !nearest.entry.street.label.includes(currentName) && Math.min(...match.candidates.map((c) => distanceToEntryM(segment.geometry, c))) > FAR_STREET_M) {
+          return {
+            kind: "issue",
+            issue: {
+              ...baseIssue,
+              status: "WRONG_STREET",
+              suggestion: nearest.entry.namePart,
+              note: { ...noteFor(nearest.entry) ?? {}, existsIn: match.entry.street.zipLabel },
+              fixable: true
+            }
+          };
+        }
+        if (locality && !match.inLocality) {
+          return {
+            kind: "issue",
+            issue: {
+              ...baseIssue,
+              status: "WRONG_CITY",
+              suggestion: null,
+              note: { existsIn: match.entry.street.zipLabel },
+              fixable: false
+            }
+          };
+        }
+        return { kind: "ok" };
+      }
+      const statusByLevel = {
+        cosmetic: "COSMETIC",
+        variant: "VARIANT",
+        near: "NEAR",
+        stem: "WRONG_TYPE"
+      };
+      return {
+        kind: "issue",
+        issue: {
+          ...baseIssue,
+          status: statusByLevel[match.level],
+          suggestion: match.entry.namePart,
+          note: noteFor(match.entry),
+          fixable: true
+        }
+      };
+    }
+    if (settings.altNameCountsAsOk) {
+      for (const alt of address.altStreets) {
+        const altName = alt.street?.name?.trim();
+        if (!altName) continue;
+        const altMatch = index.lookup(altName, locality);
+        if (altMatch && (altMatch.level === "exact" || altMatch.level === "cosmetic")) {
+          return { kind: "okAlt" };
+        }
+      }
+    }
+    if (nearest && nearest.distanceM <= NEAR_STREET_M) {
+      const level = compareNameToCandidate(currentName, nearest.entry.namePart);
+      if (level && level !== "exact") {
+        const statusByLevel = {
+          cosmetic: "COSMETIC",
+          variant: "VARIANT",
+          near: "NEAR",
+          stem: "WRONG_TYPE"
+        };
+        return {
+          kind: "issue",
+          issue: {
+            ...baseIssue,
+            status: statusByLevel[level],
+            suggestion: nearest.entry.namePart,
+            note: noteFor(nearest.entry),
+            fixable: true
+          }
+        };
+      }
+    }
+    return {
+      kind: "issue",
+      issue: {
+        ...baseIssue,
+        status: "NOT_FOUND",
+        suggestion: null,
+        note: null,
+        fixable: false
+      }
+    };
+  }
+
   // src/scan.ts
   var DEBOUNCE_MS = 800;
   var BBOX_PADDING_RATIO = 0.2;
@@ -1180,6 +1394,7 @@
     controller = null;
     debounceTimer;
     lastIndex = null;
+    lastSpatialIndex = null;
     /** Tile keys covered by lastIndex; segments outside are not name-checked. */
     coveredTiles = null;
     listeners = [];
@@ -1231,6 +1446,7 @@
     rescan() {
       this.fetcher.cache.clear();
       this.lastIndex = null;
+      this.lastSpatialIndex = null;
       this.coveredTiles = null;
       this.requestScan();
     }
@@ -1276,6 +1492,7 @@
         this.publish({ state: "evaluating", progress: null });
         const index = new OfficialIndex(streets);
         this.lastIndex = index;
+        this.lastSpatialIndex = new SpatialIndex(index.list);
         this.coveredTiles = new Set(tileKeysForBbox(bbox));
         this.evaluateAll(index);
         this.publish({ state: "done", officialStreetCount: index.streetCount });
@@ -1299,7 +1516,8 @@
         let verdict;
         try {
           const address = this.sdk.DataModel.Segments.getAddress({ segmentId: segment.id });
-          verdict = evaluateSegment(segment, address, index, settings);
+          const nearest = settings.geometryMatching && this.lastSpatialIndex ? nearestOfficial(segment.geometry, this.lastSpatialIndex) : null;
+          verdict = evaluateSegment(segment, address, index, settings, nearest);
         } catch {
           stats.skipped++;
           continue;
@@ -1410,7 +1628,8 @@
     keepOldNameAsAlt: false,
     language: "auto",
     guidelineChecks: true,
-    editPanelHelper: true
+    editPanelHelper: true,
+    geometryMatching: true
   };
   var STORAGE_KEY = "wme-ch-name-check.settings";
   function loadSettings() {
@@ -1510,6 +1729,7 @@ ${statusChipRules}
     VARIANT: "legendVARIANT",
     NEAR: "legendNEAR",
     WRONG_TYPE: "legendWRONG_TYPE",
+    WRONG_STREET: "legendWRONG_STREET",
     WRONG_CITY: "legendWRONG_CITY",
     NOT_FOUND: "legendNOT_FOUND",
     UNNAMED: "legendUNNAMED",
@@ -1655,7 +1875,7 @@ ${statusChipRules}
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"0.9.0"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"1.0.0"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/wme-ch-street-name-checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -1934,6 +2154,7 @@ ${statusChipRules}
       details.appendChild(toggle("keepOldName", "keepOldNameAsAlt", "keepOldNameTitle"));
       details.appendChild(toggle("guidelineChecks", "guidelineChecks", "guidelineChecksTitle"));
       details.appendChild(toggle("helperSetting", "editPanelHelper"));
+      details.appendChild(toggle("geometryMatching", "geometryMatching", "geometryMatchingTitle"));
       const scopingRow = el("div", "chk-settings-row");
       scopingRow.appendChild(el("span", "", t("scopingLabel")));
       const select = el("select");
@@ -2205,7 +2426,7 @@ ${statusChipRules}
     await tab.init();
     new EditPanelBox(sdk2, scanner, settings).init();
     scanner.start();
-    log.info(`v${"0.9.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.0.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

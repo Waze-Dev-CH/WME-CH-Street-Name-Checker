@@ -3,6 +3,18 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.0.0] - 2026-06-12
+
+### Added
+- Geometry matching (toggleable, on by default): official street axes are fetched with the register entries and matched spatially against Waze segments.
+  - `UNNAMED` segments now get a one-click suggestion: the official street underneath.
+  - New `WRONG_STREET` status (dark red): the segment's name is official somewhere in the area, but the street underneath carries another name.
+  - Ambiguous cases the name-based cascade used to drop (two stems or two fuzzy candidates) are disambiguated by distance.
+- Geometries handle real register shapes: MultiLineString, GeometryCollection, and named-area polygons (excluded from spatial matching on purpose).
+
+### Changed
+- Tiles now carry geometries (~5-10x heavier, measured ~400 KB on the densest Lausanne tile); the in-memory cache cap is reduced from 300 to 120 tiles accordingly.
+
 ## [0.9.0] - 2026-06-12
 
 ### Fixed
