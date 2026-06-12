@@ -40,14 +40,6 @@ ${statusChipRules}
 .chk-settings label { display: flex; align-items: center; gap: 4px; font-weight: normal; }
 .chk-settings-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
 .chk-empty { color: #4a8f3c; font-weight: bold; padding: 8px 0; }
-.chk-helper { margin: 8px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; background: #fafafa; display: flex; flex-direction: column; gap: 6px; }
-.chk-helper-head { display: flex; align-items: center; gap: 6px; }
-.chk-helper-sug { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.chk-helper input { width: 100%; box-sizing: border-box; padding: 2px 6px; }
-.chk-helper-list { max-height: 180px; overflow-y: auto; }
-.chk-helper-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 2px 4px; cursor: pointer; border-radius: 3px; }
-.chk-helper-row:hover { background: #e8f2ff; }
-.chk-helper button { cursor: pointer; }
 .chk-muted { color: #888; }
 .chk-error { color: #c00; }
 `;

@@ -42,7 +42,6 @@ export interface Settings {
   keepOldNameAsAlt: boolean;
   language: LanguagePreference;
   guidelineChecks: boolean;
-  editPanelHelper: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -56,7 +55,6 @@ export const DEFAULT_SETTINGS: Settings = {
   keepOldNameAsAlt: false,
   language: "auto",
   guidelineChecks: true,
-  editPanelHelper: true,
 };
 
 const STORAGE_KEY = "wme-ch-name-check.settings";

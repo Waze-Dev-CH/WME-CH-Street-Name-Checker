@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      0.4.0
+// @version      0.4.1
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -271,11 +271,6 @@
     legendNARROW_MISUSE: "Narrow Street misuse: one-way or shorter than 50 m",
     guidelineChecks: "Swiss guideline checks (micro-segments, loops, narrow streets)",
     guidelineChecksTitle: "Checks from the Suisse romande editing guidelines that need no external data",
-    helperSearchPlaceholder: "Search official names…",
-    helperApply: "Apply",
-    helperNoIndex: "No official data yet — move the map at zoom ≥ 15",
-    helperOk: "matches the official register",
-    helperSetting: "Helper in the segment edit panel",
     settingsTitle: "Settings",
     roadTypesLabel: "Checked road types:",
     altOk: "Alternate name match counts as OK",
@@ -337,11 +332,6 @@
     legendNARROW_MISUSE: "Rue étroite mal utilisée: sens unique ou moins de 50 m",
     guidelineChecks: "Contrôles des règles suisses (micro-segments, boucles, rues étroites)",
     guidelineChecksTitle: "Contrôles issus des règles d'édition de Suisse romande, sans donnée externe",
-    helperSearchPlaceholder: "Rechercher un nom officiel…",
-    helperApply: "Appliquer",
-    helperNoIndex: "Pas encore de données officielles — déplacez la carte au zoom ≥ 15",
-    helperOk: "correspond au répertoire officiel",
-    helperSetting: "Assistant dans le panneau d'édition du segment",
     settingsTitle: "Réglages",
     roadTypesLabel: "Types de routes vérifiés:",
     altOk: "Nom alternatif correspondant = OK",
@@ -403,11 +393,6 @@
     legendNARROW_MISUSE: "Falsch verwendete enge Strasse: Einbahn oder kürzer als 50 m",
     guidelineChecks: "Schweizer Regelprüfungen (Mikrosegmente, Schleifen, enge Strassen)",
     guidelineChecksTitle: "Prüfungen aus den Editier-Richtlinien der Romandie, ohne externe Daten",
-    helperSearchPlaceholder: "Amtliche Namen suchen…",
-    helperApply: "Übernehmen",
-    helperNoIndex: "Noch keine amtlichen Daten — Karte bei Zoom ≥ 15 bewegen",
-    helperOk: "stimmt mit dem amtlichen Verzeichnis überein",
-    helperSetting: "Assistent im Segment-Bearbeitungspanel",
     settingsTitle: "Einstellungen",
     roadTypesLabel: "Geprüfte Strassentypen:",
     altOk: "Alternativname zählt als OK",
@@ -469,11 +454,6 @@
     legendNARROW_MISUSE: "Strada stretta usata male: senso unico o meno di 50 m",
     guidelineChecks: "Controlli delle regole svizzere (micro-segmenti, anelli, strade strette)",
     guidelineChecksTitle: "Controlli dalle regole di editing della Svizzera romanda, senza dati esterni",
-    helperSearchPlaceholder: "Cerca nomi ufficiali…",
-    helperApply: "Applica",
-    helperNoIndex: "Ancora nessun dato ufficiale — muovi la mappa con zoom ≥ 15",
-    helperOk: "corrisponde al repertorio ufficiale",
-    helperSetting: "Assistente nel pannello di modifica del segmento",
     settingsTitle: "Impostazioni",
     roadTypesLabel: "Tipi di strada verificati:",
     altOk: "Nome alternativo corrispondente = OK",
@@ -872,7 +852,6 @@
     byK2 = /* @__PURE__ */ new Map();
     /** Buckets by first character of the folded K2 key, for bounded fuzzy search. */
     fuzzyBuckets = /* @__PURE__ */ new Map();
-    all = [];
     entryCount;
     streetCount;
     constructor(streets) {
@@ -888,7 +867,6 @@
             locality
           };
           entries++;
-          this.all.push(entry);
           pushTo(this.byK0, k0(namePart), entry);
           pushTo(this.byK1, k1(namePart), entry);
           const k2Keys = k2(namePart);
@@ -905,10 +883,6 @@
       }
       this.entryCount = entries;
       this.streetCount = streets.length;
-    }
-    /** Every indexed name (full labels and slash parts), for browsing UIs. */
-    get list() {
-      return this.all;
     }
     /**
      * Cascade lookup: K0 exact -> K1 cosmetic -> K2 variant -> bounded fuzzy.
@@ -1014,9 +988,6 @@
     }
     getSnapshot() {
       return this.snapshot;
-    }
-    getOfficialIndex() {
-      return this.lastIndex;
     }
     setPaused(paused) {
       this.paused = paused;
@@ -1190,8 +1161,7 @@
     showMapLabels: true,
     keepOldNameAsAlt: false,
     language: "auto",
-    guidelineChecks: true,
-    editPanelHelper: true
+    guidelineChecks: true
   };
   var STORAGE_KEY = "wme-ch-name-check.settings";
   function loadSettings() {
@@ -1231,12 +1201,10 @@
   // src/fix.ts
   var GROUP_FIX_CAP = 25;
   var GROUP_FIX_CONFIRM_THRESHOLD = 5;
-  function formatFixError(outcome) {
-    if (outcome.errorCode) return t(outcome.errorCode);
-    return outcome.errorDetail ?? "?";
-  }
-  function applyStreetName(sdk2, segmentId, streetName, opts) {
+  function fixSegment(sdk2, issue, settings) {
+    const segmentId = issue.segmentId;
     const fail = (errorCode) => ({ segmentId, ok: false, errorCode });
+    if (!issue.fixable || !issue.suggestion) return fail("errNotFixable");
     if (!sdk2.Editing.isEditingAllowed()) return fail("errEditingNotAllowed");
     try {
       const segment = sdk2.DataModel.Segments.getById({ segmentId });
@@ -1244,18 +1212,18 @@
       const address = sdk2.DataModel.Segments.getAddress({ segmentId });
       const cityId = address.city?.id;
       if (cityId == null) return fail("errNoCity");
-      let street = sdk2.DataModel.Streets.getStreet({ streetName, cityId });
+      let street = sdk2.DataModel.Streets.getStreet({ streetName: issue.suggestion, cityId });
       if (!street) {
         try {
-          street = sdk2.DataModel.Streets.addStreet({ streetName, cityId });
+          street = sdk2.DataModel.Streets.addStreet({ streetName: issue.suggestion, cityId });
         } catch {
-          street = sdk2.DataModel.Streets.getStreet({ streetName, cityId });
+          street = sdk2.DataModel.Streets.getStreet({ streetName: issue.suggestion, cityId });
         }
       }
       if (!street) return fail("errStreetCreate");
-      if (segment.primaryStreetId === street.id) return { segmentId, ok: true };
       const alternateStreetIds = [...segment.alternateStreetIds];
-      if (opts.keepOldAsAlt && segment.primaryStreetId != null && segment.primaryStreetId !== street.id && !alternateStreetIds.includes(segment.primaryStreetId)) {
+      if (settings.keepOldNameAsAlt && issue.status !== "NEAR" && // never keep a typo as alternate
+      segment.primaryStreetId != null && segment.primaryStreetId !== street.id && !alternateStreetIds.includes(segment.primaryStreetId)) {
         alternateStreetIds.push(segment.primaryStreetId);
       }
       sdk2.DataModel.Segments.updateAddress({
@@ -1265,22 +1233,13 @@
       });
       return { segmentId, ok: true };
     } catch (err) {
-      log.error(`Applying street name failed for segment ${segmentId}`, err);
+      log.error(`Fix failed for segment ${segmentId}`, err);
       return {
         segmentId,
         ok: false,
         errorDetail: err instanceof Error ? err.message : String(err)
       };
     }
-  }
-  function fixSegment(sdk2, issue, settings) {
-    if (!issue.fixable || !issue.suggestion) {
-      return { segmentId: issue.segmentId, ok: false, errorCode: "errNotFixable" };
-    }
-    return applyStreetName(sdk2, issue.segmentId, issue.suggestion, {
-      // never keep a typo as alternate
-      keepOldAsAlt: settings.keepOldNameAsAlt && issue.status !== "NEAR"
-    });
   }
   function fixGroup(sdk2, issues, settings) {
     const outcomes = [];
@@ -1291,187 +1250,6 @@
     }
     return outcomes;
   }
-
-  // src/ui/edit-panel.ts
-  var CONTAINER_ID = "chk-edit-helper";
-  var MAX_RESULTS = 20;
-  var INJECT_RETRY_DELAYS_MS = [0, 250, 750];
-  var OK_COLOR = "#4a8f3c";
-  function filterEntries(entries, query, locality, limit = MAX_RESULTS) {
-    const q = foldAccents(k1(query));
-    const seen = /* @__PURE__ */ new Set();
-    const inLocality = [];
-    const elsewhere = [];
-    for (const entry of entries) {
-      if (q !== "" && !foldAccents(k1(entry.namePart)).includes(q)) continue;
-      if (seen.has(entry.namePart)) continue;
-      seen.add(entry.namePart);
-      (locality !== null && entry.locality === locality ? inLocality : elsewhere).push(entry);
-    }
-    const byName = (a, b) => a.namePart.localeCompare(b.namePart);
-    inLocality.sort(byName);
-    elsewhere.sort(byName);
-    return [...inLocality, ...elsewhere].slice(0, limit);
-  }
-  var EditPanelHelper = class {
-    constructor(sdk2, scanner, settings) {
-      this.sdk = sdk2;
-      this.scanner = scanner;
-      this.settings = settings;
-    }
-    sdk;
-    scanner;
-    settings;
-    query = "";
-    retryTimers = [];
-    warnedMissingPanel = false;
-    init() {
-      this.sdk.Events.on({ eventName: "wme-selection-changed", eventHandler: () => this.schedule() });
-      this.sdk.Events.on({ eventName: "wme-after-edit", eventHandler: () => this.schedule() });
-      this.scanner.onUpdate(() => {
-        const container = document.getElementById(CONTAINER_ID);
-        if (container && !container.contains(document.activeElement)) this.schedule();
-      });
-    }
-    selectedSegmentId() {
-      try {
-        const selection = this.sdk.Editing.getSelection();
-        if (selection?.objectType === "segment" && selection.ids.length === 1) {
-          return selection.ids[0];
-        }
-      } catch {
-      }
-      return null;
-    }
-    schedule() {
-      for (const timer of this.retryTimers) clearTimeout(timer);
-      this.retryTimers = [];
-      const segmentId = this.selectedSegmentId();
-      if (!this.settings.get().editPanelHelper || segmentId === null) {
-        document.getElementById(CONTAINER_ID)?.remove();
-        return;
-      }
-      for (const delay of INJECT_RETRY_DELAYS_MS) {
-        this.retryTimers.push(setTimeout(() => this.inject(segmentId), delay));
-      }
-    }
-    inject(segmentId) {
-      if (this.selectedSegmentId() !== segmentId) return;
-      const panel = document.querySelector("#edit-panel");
-      if (!panel) {
-        if (!this.warnedMissingPanel) {
-          this.warnedMissingPanel = true;
-          log.warn("#edit-panel not found; the edit-panel helper is unavailable in this WME version");
-        }
-        return;
-      }
-      let container = document.getElementById(CONTAINER_ID);
-      if (!container) {
-        container = document.createElement("div");
-        container.id = CONTAINER_ID;
-        container.className = "chk-helper";
-        panel.prepend(container);
-        this.query = "";
-      } else if (container.contains(document.activeElement)) {
-        return;
-      }
-      this.render(container, segmentId);
-    }
-    render(container, segmentId) {
-      container.replaceChildren();
-      const segment = this.sdk.DataModel.Segments.getById({ segmentId });
-      if (!segment) return;
-      let cityLocality = null;
-      let currentName = null;
-      try {
-        const address = this.sdk.DataModel.Segments.getAddress({ segmentId });
-        cityLocality = address.city?.name ? k1(address.city.name) : null;
-        currentName = address.street?.name?.trim() || null;
-      } catch {
-        return;
-      }
-      const head = document.createElement("div");
-      head.className = "chk-helper-head";
-      const title = document.createElement("b");
-      title.textContent = "CH Names";
-      head.appendChild(title);
-      const issue = this.scanner.getSnapshot().issues.get(segmentId);
-      const dot = document.createElement("span");
-      dot.className = "chk-dot";
-      const statusText = document.createElement("span");
-      if (issue) {
-        dot.style.background = STATUS_STYLES[issue.status].strokeColor;
-        statusText.textContent = issue.status;
-      } else if (currentName) {
-        dot.style.background = OK_COLOR;
-        statusText.textContent = t("helperOk");
-      } else {
-        dot.style.background = STATUS_STYLES.UNNAMED.strokeColor;
-        statusText.textContent = "UNNAMED";
-      }
-      head.append(dot, statusText);
-      container.appendChild(head);
-      if (issue?.suggestion) {
-        const sug = document.createElement("div");
-        sug.className = "chk-helper-sug";
-        const name = document.createElement("b");
-        name.textContent = `→ ${issue.suggestion}`;
-        const applyBtn = document.createElement("button");
-        applyBtn.textContent = t("helperApply");
-        applyBtn.addEventListener("click", () => this.apply(segmentId, issue.suggestion));
-        sug.append(name, applyBtn);
-        container.appendChild(sug);
-      }
-      const index = this.scanner.getOfficialIndex();
-      if (!index) {
-        const muted = document.createElement("div");
-        muted.className = "chk-muted";
-        muted.textContent = t("helperNoIndex");
-        container.appendChild(muted);
-        return;
-      }
-      const input = document.createElement("input");
-      input.type = "search";
-      input.placeholder = t("helperSearchPlaceholder");
-      input.value = this.query;
-      container.appendChild(input);
-      const list = document.createElement("div");
-      list.className = "chk-helper-list";
-      container.appendChild(list);
-      const renderList = () => {
-        list.replaceChildren();
-        for (const entry of filterEntries(index.list, this.query, cityLocality)) {
-          const row = document.createElement("div");
-          row.className = "chk-helper-row";
-          const name = document.createElement("span");
-          name.textContent = entry.namePart;
-          const where = document.createElement("span");
-          where.className = "chk-muted";
-          where.textContent = entry.street.zipLabel;
-          row.append(name, where);
-          row.title = entry.street.label;
-          row.addEventListener("click", () => this.apply(segmentId, entry.namePart));
-          list.appendChild(row);
-        }
-      };
-      input.addEventListener("input", () => {
-        this.query = input.value;
-        renderList();
-      });
-      renderList();
-    }
-    apply(segmentId, streetName) {
-      const outcome = applyStreetName(this.sdk, segmentId, streetName, {
-        keepOldAsAlt: this.settings.get().keepOldNameAsAlt
-      });
-      if (!outcome.ok) {
-        alert(t("fixFailed", { error: formatFixError(outcome) }));
-        return;
-      }
-      this.scanner.reevaluate();
-      this.schedule();
-    }
-  };
 
   // src/ui/styles.ts
   var statusChipRules = Object.keys(STATUS_STYLES).map(
@@ -1510,14 +1288,6 @@ ${statusChipRules}
 .chk-settings label { display: flex; align-items: center; gap: 4px; font-weight: normal; }
 .chk-settings-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
 .chk-empty { color: #4a8f3c; font-weight: bold; padding: 8px 0; }
-.chk-helper { margin: 8px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; background: #fafafa; display: flex; flex-direction: column; gap: 6px; }
-.chk-helper-head { display: flex; align-items: center; gap: 6px; }
-.chk-helper-sug { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.chk-helper input { width: 100%; box-sizing: border-box; padding: 2px 6px; }
-.chk-helper-list { max-height: 180px; overflow-y: auto; }
-.chk-helper-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 2px 4px; cursor: pointer; border-radius: 3px; }
-.chk-helper-row:hover { background: #e8f2ff; }
-.chk-helper button { cursor: pointer; }
 .chk-muted { color: #888; }
 .chk-error { color: #c00; }
 `;
@@ -1567,6 +1337,10 @@ ${statusChipRules}
     if (note.fullLabel) parts.push(t("noteFullLabel", { label: note.fullLabel }));
     if (note.existsIn) parts.push(t("noteExistsIn", { place: note.existsIn }));
     return parts.join(", ");
+  }
+  function formatFixError(outcome) {
+    if (outcome.errorCode) return t(outcome.errorCode);
+    return outcome.errorDetail ?? "?";
   }
   function groupIssues(issues) {
     const groups = /* @__PURE__ */ new Map();
@@ -1885,7 +1659,6 @@ ${statusChipRules}
       details.appendChild(toggle("showMapLabels", "showMapLabels"));
       details.appendChild(toggle("keepOldName", "keepOldNameAsAlt", "keepOldNameTitle"));
       details.appendChild(toggle("guidelineChecks", "guidelineChecks", "guidelineChecksTitle"));
-      details.appendChild(toggle("helperSetting", "editPanelHelper"));
       const scopingRow = el("div", "chk-settings-row");
       scopingRow.appendChild(el("span", "", t("scopingLabel")));
       const select = el("select");
@@ -1961,9 +1734,8 @@ ${statusChipRules}
     });
     const tab = new TabUI(sdk2, scanner, settings);
     await tab.init();
-    new EditPanelHelper(sdk2, scanner, settings).init();
     scanner.start();
-    log.info(`v${"0.4.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"0.4.1"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

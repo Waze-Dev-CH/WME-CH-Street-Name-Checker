@@ -5,7 +5,6 @@ import { HighlightLayer, registerLayerCheckbox } from "./map-layer";
 import { Scanner } from "./scan";
 import { initSdk } from "./sdk";
 import { SettingsStore } from "./settings";
-import { EditPanelHelper } from "./ui/edit-panel";
 import { TabUI } from "./ui/tab";
 
 async function main(): Promise<void> {
@@ -30,8 +29,6 @@ async function main(): Promise<void> {
 
   const tab = new TabUI(sdk, scanner, settings);
   await tab.init();
-
-  new EditPanelHelper(sdk, scanner, settings).init();
 
   scanner.start();
   log.info(`v${__SCRIPT_VERSION__} ready (SDK ${sdk.getSDKVersion()}, WME ${sdk.getWMEVersion()})`);

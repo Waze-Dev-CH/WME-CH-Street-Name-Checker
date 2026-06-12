@@ -1,5 +1,4 @@
 import type { WmeSDK } from "wme-sdk-typings";
-import { t } from "./i18n";
 import { log } from "./log";
 import type { Issue } from "./matching/evaluate";
 import type { Settings } from "./settings";
@@ -23,24 +22,16 @@ export interface FixOutcome {
   errorDetail?: string;
 }
 
-export function formatFixError(outcome: FixOutcome): string {
-  if (outcome.errorCode) return t(outcome.errorCode);
-  return outcome.errorDetail ?? "?";
-}
-
 /**
- * Set a segment's primary street to the given name: find or create the Street
- * record in the segment's city, then update the segment's address.
+ * Apply the suggested official name to a segment: find or create the Street
+ * record in the segment's city, then update the segment's primary address.
  * Never saves; the editor reviews and saves with the native WME flow.
  */
-export function applyStreetName(
-  sdk: WmeSDK,
-  segmentId: number,
-  streetName: string,
-  opts: { keepOldAsAlt: boolean },
-): FixOutcome {
+export function fixSegment(sdk: WmeSDK, issue: Issue, settings: Settings): FixOutcome {
+  const segmentId = issue.segmentId;
   const fail = (errorCode: FixErrorCode): FixOutcome => ({ segmentId, ok: false, errorCode });
 
+  if (!issue.fixable || !issue.suggestion) return fail("errNotFixable");
   if (!sdk.Editing.isEditingAllowed()) return fail("errEditingNotAllowed");
 
   try {
@@ -50,21 +41,21 @@ export function applyStreetName(
     const cityId = address.city?.id;
     if (cityId == null) return fail("errNoCity");
 
-    let street = sdk.DataModel.Streets.getStreet({ streetName, cityId });
+    let street = sdk.DataModel.Streets.getStreet({ streetName: issue.suggestion, cityId });
     if (!street) {
       try {
-        street = sdk.DataModel.Streets.addStreet({ streetName, cityId });
+        street = sdk.DataModel.Streets.addStreet({ streetName: issue.suggestion, cityId });
       } catch {
-        street = sdk.DataModel.Streets.getStreet({ streetName, cityId });
+        street = sdk.DataModel.Streets.getStreet({ streetName: issue.suggestion, cityId });
       }
     }
     if (!street) return fail("errStreetCreate");
-    if (segment.primaryStreetId === street.id) return { segmentId, ok: true };
 
     // Alternates must be passed back explicitly so they are preserved.
     const alternateStreetIds = [...segment.alternateStreetIds];
     if (
-      opts.keepOldAsAlt &&
+      settings.keepOldNameAsAlt &&
+      issue.status !== "NEAR" && // never keep a typo as alternate
       segment.primaryStreetId != null &&
       segment.primaryStreetId !== street.id &&
       !alternateStreetIds.includes(segment.primaryStreetId)
@@ -79,24 +70,13 @@ export function applyStreetName(
     });
     return { segmentId, ok: true };
   } catch (err) {
-    log.error(`Applying street name failed for segment ${segmentId}`, err);
+    log.error(`Fix failed for segment ${segmentId}`, err);
     return {
       segmentId,
       ok: false,
       errorDetail: err instanceof Error ? err.message : String(err),
     };
   }
-}
-
-/** Apply the suggested official name of a scan issue. */
-export function fixSegment(sdk: WmeSDK, issue: Issue, settings: Settings): FixOutcome {
-  if (!issue.fixable || !issue.suggestion) {
-    return { segmentId: issue.segmentId, ok: false, errorCode: "errNotFixable" };
-  }
-  return applyStreetName(sdk, issue.segmentId, issue.suggestion, {
-    // never keep a typo as alternate
-    keepOldAsAlt: settings.keepOldNameAsAlt && issue.status !== "NEAR",
-  });
 }
 
 /** Sequential group fix; stops at the first error. Hard-capped. */

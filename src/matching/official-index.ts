@@ -65,7 +65,6 @@ export class OfficialIndex {
   private byK2 = new Map<string, IndexedEntry[]>();
   /** Buckets by first character of the folded K2 key, for bounded fuzzy search. */
   private fuzzyBuckets = new Map<string, FuzzyCandidate[]>();
-  private all: IndexedEntry[] = [];
   readonly entryCount: number;
   readonly streetCount: number;
 
@@ -84,7 +83,6 @@ export class OfficialIndex {
           locality,
         };
         entries++;
-        this.all.push(entry);
         pushTo(this.byK0, k0(namePart), entry);
         pushTo(this.byK1, k1(namePart), entry);
         const k2Keys = k2(namePart);
@@ -101,11 +99,6 @@ export class OfficialIndex {
     }
     this.entryCount = entries;
     this.streetCount = streets.length;
-  }
-
-  /** Every indexed name (full labels and slash parts), for browsing UIs. */
-  get list(): readonly IndexedEntry[] {
-    return this.all;
   }
 
   /**
