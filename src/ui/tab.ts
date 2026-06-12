@@ -62,6 +62,7 @@ export function formatNote(note: IssueNote | null): string {
   if (note.planned) parts.push(t("notePlanned"));
   if (note.fullLabel) parts.push(t("noteFullLabel", { label: note.fullLabel }));
   if (note.existsIn) parts.push(t("noteExistsIn", { place: note.existsIn }));
+  if (note.ownDistanceM !== undefined) parts.push(t("noteOwnDistance", { m: note.ownDistanceM }));
   return parts.join(", ");
 }
 

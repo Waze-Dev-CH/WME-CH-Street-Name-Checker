@@ -246,6 +246,8 @@ describe("geometry matching", () => {
     if (v.kind === "issue") {
       expect(v.issue.status).toBe("WRONG_STREET");
       expect(v.issue.suggestion).toBe("Route de Berne");
+      expect(v.issue.note?.ownDistanceM).toBeGreaterThan(150);
+      expect(v.issue.note?.ownDistanceM).toBeLessThan(250);
     }
   });
 

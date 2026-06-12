@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.6.0
+// @version      1.6.1
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -383,6 +383,7 @@
     notePlanned: "planned",
     noteFullLabel: "full label: {label}",
     noteExistsIn: "exists in: {place}",
+    noteOwnDistance: "its official axis is ~{m} m away",
     fixAll: "Fix all ({n})",
     fix: "Fix",
     fixTitle: 'Apply "{name}"',
@@ -458,6 +459,7 @@
     notePlanned: "planifié",
     noteFullLabel: "libellé complet: {label}",
     noteExistsIn: "existe à: {place}",
+    noteOwnDistance: "son axe officiel à ~{m} m",
     fixAll: "Tout corriger ({n})",
     fix: "Corriger",
     fixTitle: "Appliquer «{name}»",
@@ -533,6 +535,7 @@
     notePlanned: "geplant",
     noteFullLabel: "vollständige Bezeichnung: {label}",
     noteExistsIn: "existiert in: {place}",
+    noteOwnDistance: "amtliche Achse ~{m} m entfernt",
     fixAll: "Alle korrigieren ({n})",
     fix: "Korrigieren",
     fixTitle: "«{name}» übernehmen",
@@ -608,6 +611,7 @@
     notePlanned: "pianificata",
     noteFullLabel: "denominazione completa: {label}",
     noteExistsIn: "esiste a: {place}",
+    noteOwnDistance: "asse ufficiale a ~{m} m",
     fixAll: "Correggi tutti ({n})",
     fix: "Correggi",
     fixTitle: "Applica «{name}»",
@@ -1496,14 +1500,20 @@
     const match = index.lookup(currentName, locality);
     if (match) {
       if (match.level === "exact") {
-        if (nearest && nearest.distanceM <= SUGGEST_MAX_M && nearest.coverage >= WRONG_STREET_MIN_COVERAGE && k1(nearest.entry.namePart) !== k1(currentName) && !nearest.entry.street.label.includes(currentName) && Math.min(...match.candidates.map((c) => distanceToEntryM(segment.geometry, c))) > FAR_STREET_M) {
+        const ownDistanceM = nearest && nearest.distanceM <= SUGGEST_MAX_M ? Math.min(...match.candidates.map((c) => distanceToEntryM(segment.geometry, c))) : Infinity;
+        if (nearest && nearest.distanceM <= SUGGEST_MAX_M && nearest.coverage >= WRONG_STREET_MIN_COVERAGE && k1(nearest.entry.namePart) !== k1(currentName) && !nearest.entry.street.label.includes(currentName) && ownDistanceM > FAR_STREET_M) {
           return {
             kind: "issue",
             issue: {
               ...baseIssue,
               status: "WRONG_STREET",
               suggestion: nearest.entry.namePart,
-              note: { ...noteFor(nearest.entry) ?? {}, existsIn: match.entry.street.zipLabel },
+              note: {
+                ...noteFor(nearest.entry) ?? {},
+                existsIn: match.entry.street.zipLabel,
+                // review aid: how far the current name's own axis really is
+                ...Number.isFinite(ownDistanceM) ? { ownDistanceM: Math.round(ownDistanceM) } : {}
+              },
               fixable: true
             }
           };
@@ -2098,6 +2108,7 @@ ${statusChipRules}
     if (note.planned) parts.push(t("notePlanned"));
     if (note.fullLabel) parts.push(t("noteFullLabel", { label: note.fullLabel }));
     if (note.existsIn) parts.push(t("noteExistsIn", { place: note.existsIn }));
+    if (note.ownDistanceM !== void 0) parts.push(t("noteOwnDistance", { m: note.ownDistanceM }));
     return parts.join(", ");
   }
   var SEVERITY_ORDER = {
@@ -2230,7 +2241,7 @@ ${statusChipRules}
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"1.6.0"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"1.6.1"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -2838,7 +2849,7 @@ ${statusChipRules}
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.6.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.6.1"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

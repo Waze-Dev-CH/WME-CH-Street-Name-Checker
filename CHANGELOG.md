@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.6.1] - 2026-06-12
+
+### Added
+- WRONG_STREET notes now show how far the current name's own official axis is ("its official axis is ~230 m away"), so borderline overlaps and clear-cut register disagreements can be told apart before fixing.
+
 ## [1.6.0] - 2026-06-12
 
 ### Changed

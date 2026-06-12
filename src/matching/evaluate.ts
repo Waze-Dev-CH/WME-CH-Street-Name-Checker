@@ -33,6 +33,8 @@ export interface IssueNote {
   fullLabel?: string;
   /** zip_label of the locality where the name actually exists (WRONG_CITY). */
   existsIn?: string;
+  /** Distance to the official axis of the CURRENT name (WRONG_STREET review aid). */
+  ownDistanceM?: number;
 }
 
 export interface Issue {
@@ -125,14 +127,17 @@ export function evaluateSegment(
       // Geometry check: the name is official somewhere, but is it the street
       // actually under this segment? Only flag when the matched street is
       // clearly far away AND another official street is clearly underneath.
+      const ownDistanceM =
+        nearest && nearest.distanceM <= SUGGEST_MAX_M
+          ? Math.min(...match.candidates.map((c) => distanceToEntryM(segment.geometry, c)))
+          : Infinity;
       if (
         nearest &&
         nearest.distanceM <= SUGGEST_MAX_M &&
         nearest.coverage >= WRONG_STREET_MIN_COVERAGE &&
         k1(nearest.entry.namePart) !== k1(currentName) &&
         !nearest.entry.street.label.includes(currentName) &&
-        Math.min(...match.candidates.map((c) => distanceToEntryM(segment.geometry, c))) >
-          FAR_STREET_M
+        ownDistanceM > FAR_STREET_M
       ) {
         return {
           kind: "issue",
@@ -140,7 +145,12 @@ export function evaluateSegment(
             ...baseIssue,
             status: "WRONG_STREET",
             suggestion: nearest.entry.namePart,
-            note: { ...(noteFor(nearest.entry) ?? {}), existsIn: match.entry.street.zipLabel },
+            note: {
+              ...(noteFor(nearest.entry) ?? {}),
+              existsIn: match.entry.street.zipLabel,
+              // review aid: how far the current name's own axis really is
+              ...(Number.isFinite(ownDistanceM) ? { ownDistanceM: Math.round(ownDistanceM) } : {}),
+            },
             fixable: true,
           },
         };
