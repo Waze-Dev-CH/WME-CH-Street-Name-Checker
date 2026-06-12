@@ -8,6 +8,7 @@
   "author": "Yann Rapenne",
   "scripts": {
     "build": "node build.mjs",
+    "release": "node scripts/release.mjs",
     "dev": "node build.mjs --watch",
     "test": "vitest run",
     "test:watch": "vitest",
