@@ -41,6 +41,7 @@ export interface Settings {
   showMapLabels: boolean;
   keepOldNameAsAlt: boolean;
   language: LanguagePreference;
+  guidelineChecks: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -53,6 +54,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showMapLabels: true,
   keepOldNameAsAlt: false,
   language: "auto",
+  guidelineChecks: true,
 };
 
 const STORAGE_KEY = "wme-ch-name-check.settings";

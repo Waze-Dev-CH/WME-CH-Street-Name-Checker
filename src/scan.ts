@@ -1,6 +1,7 @@
 import type { WmeSDK } from "wme-sdk-typings";
 import type { TileFetcher } from "./geoadmin/tiles";
 import type { Bbox } from "./geoadmin/types";
+import { evaluateGuidelines } from "./guidelines";
 import { log } from "./log";
 import { evaluateSegment, type Issue } from "./matching/evaluate";
 import { OfficialIndex } from "./matching/official-index";
@@ -165,7 +166,8 @@ export class Scanner {
     const settings = this.settings.get();
     const issues = new Map<number, Issue>();
     const stats = { ok: 0, okAlt: 0, skipped: 0, total: 0 };
-    for (const segment of this.sdk.DataModel.Segments.getAll()) {
+    const segments = this.sdk.DataModel.Segments.getAll();
+    for (const segment of segments) {
       stats.total++;
       let verdict;
       try {
@@ -188,6 +190,19 @@ export class Scanner {
         case "issue":
           issues.set(verdict.issue.segmentId, verdict.issue);
           break;
+      }
+    }
+    if (settings.guidelineChecks) {
+      // Name issues keep precedence; guideline issues fill the remaining segments.
+      const getAddress = (segmentId: number) => {
+        try {
+          return this.sdk.DataModel.Segments.getAddress({ segmentId });
+        } catch {
+          return null;
+        }
+      };
+      for (const issue of evaluateGuidelines(segments, getAddress)) {
+        if (!issues.has(issue.segmentId)) issues.set(issue.segmentId, issue);
       }
     }
     this.publish({ issues, stats, unsavedCount: this.safeUnsavedCount() });

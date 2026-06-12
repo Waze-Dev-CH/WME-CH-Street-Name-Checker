@@ -15,11 +15,15 @@ Userscript Tampermonkey pour le [Waze Map Editor](https://www.waze.com/editor) q
 | `WRONG_CITY` | Le nom existe, mais dans une autre localité (mode scoping) | rose |
 | `NOT_FOUND` | Introuvable dans le répertoire officiel | rouge |
 | `UNNAMED` | Segment vérifiable sans nom | violet pointillé |
+| `MICRO_SEGMENT` | Segment carrossable < 5 m (ronds-points exclus) | cyan |
+| `LOOP` | Boucle de moins de 3 segments (nœuds d'extrémité identiques) | brun |
+| `NARROW_MISUSE` | Rue étroite à sens unique ou < 50 m | indigo pointillé |
 
 - Onglet latéral **CH Names** (panneau Scripts): compteurs filtrables, liste groupée par `nom actuel → nom officiel`, clic sur une ligne = sélection du segment, bouton "Next issue".
 - Correction 1-clic par segment ou par groupe (cap 25, confirmation au-delà de 5). **Rien n'est sauvegardé automatiquement**: les modifications entrent dans la pile d'édition WME, tu relis et sauves toi-même (Ctrl+S, undo natif).
 - Communes bilingues (Biel/Bienne…): les libellés officiels `A/B` sont acceptés en entier et pour chaque partie; un nom alternatif Waze qui correspond compte comme OK (réglable).
-- Réglages persistants: types de routes vérifiés, scoping par localité (off/warn/strict), labels carte, zoom minimal, conservation de l'ancien nom en alternatif.
+- Réglages persistants: types de routes vérifiés, scoping par localité (off/warn/strict), labels carte, zoom minimal, conservation de l'ancien nom en alternatif, langue (auto = locale WME, ou EN/FR/DE/IT).
+- Contrôles des règles d'édition de Suisse romande (sans donnée externe, désactivables): micro-segments, boucles à 1-2 segments, mauvais usage du type Rue étroite. Les trois statuts dédiés sont informatifs (pas de correction automatique: ces erreurs demandent une intervention géométrique manuelle). Le reste des règles romandes (parkings, chemins piétons, voies privées, demi-tours, culs-de-sac) relève du jugement visuel et n'est pas vérifiable automatiquement.
 
 ## Installation
 

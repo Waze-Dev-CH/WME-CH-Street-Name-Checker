@@ -10,7 +10,11 @@ export type IssueStatus =
   | "NEAR"
   | "WRONG_CITY"
   | "NOT_FOUND"
-  | "UNNAMED";
+  | "UNNAMED"
+  // Swiss guideline checks (see src/guidelines.ts):
+  | "MICRO_SEGMENT"
+  | "LOOP"
+  | "NARROW_MISUSE";
 
 /** Structured qualifiers, localized at display time by the UI. */
 export interface IssueNote {

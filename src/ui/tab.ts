@@ -18,6 +18,9 @@ const LEGEND_KEYS: Record<IssueStatus, StringKey> = {
   WRONG_CITY: "legendWRONG_CITY",
   NOT_FOUND: "legendNOT_FOUND",
   UNNAMED: "legendUNNAMED",
+  MICRO_SEGMENT: "legendMICRO_SEGMENT",
+  LOOP: "legendLOOP",
+  NARROW_MISUSE: "legendNARROW_MISUSE",
 };
 
 const STATE_KEYS: Record<ScanSnapshot["state"], StringKey> = {
@@ -405,7 +408,7 @@ export class TabUI {
       textKey: StringKey,
       key: keyof Pick<
         Settings,
-        "altNameCountsAsOk" | "showCosmetic" | "showMapLabels" | "keepOldNameAsAlt"
+        "altNameCountsAsOk" | "showCosmetic" | "showMapLabels" | "keepOldNameAsAlt" | "guidelineChecks"
       >,
       titleKey?: StringKey,
     ): HTMLElement => {
@@ -425,6 +428,7 @@ export class TabUI {
     details.appendChild(toggle("showCosmetic", "showCosmetic"));
     details.appendChild(toggle("showMapLabels", "showMapLabels"));
     details.appendChild(toggle("keepOldName", "keepOldNameAsAlt", "keepOldNameTitle"));
+    details.appendChild(toggle("guidelineChecks", "guidelineChecks", "guidelineChecksTitle"));
 
     const scopingRow = el("div", "chk-settings-row");
     scopingRow.appendChild(el("span", "", t("scopingLabel")));
