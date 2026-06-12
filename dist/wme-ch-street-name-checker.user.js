@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.2.1
+// @version      1.3.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -933,7 +933,19 @@
     { abbrev: "fg", expansions: ["faubourg"] },
     { abbrev: "st", expansions: ["saint", "sankt"] },
     { abbrev: "ste", expansions: ["sainte"] },
-    { abbrev: "str", expansions: ["strasse"] }
+    { abbrev: "str", expansions: ["strasse"] },
+    // multi-word expansions are supported (joined into the key as-is)
+    { abbrev: "zi", expansions: ["zone industrielle"] },
+    { abbrev: "za", expansions: ["zone artisanale"] },
+    { abbrev: "gd", expansions: ["grand"] },
+    { abbrev: "gde", expansions: ["grande"] },
+    { abbrev: "all", expansions: ["allee"], firstTokenOnly: true },
+    { abbrev: "esp", expansions: ["esplanade"], firstTokenOnly: true },
+    { abbrev: "anc", expansions: ["ancien", "ancienne"] },
+    { abbrev: "gen", expansions: ["general"] },
+    { abbrev: "dr", expansions: ["docteur"] },
+    { abbrev: "pt", expansions: ["petit"] },
+    { abbrev: "pte", expansions: ["petite"] }
   ];
   var ABBREV_MAP = new Map(ABBREVIATIONS.map((r) => [r.abbrev, r]));
   var MAX_VARIANTS = 8;
@@ -1017,6 +1029,7 @@
     let s = k1(name);
     s = foldAccents(s);
     s = s.replace(/(\p{L}{2,})str\.?(?=$|\s|-)/gu, "$1strasse");
+    s = s.replace(/\b(\p{L})\. ?(\p{L})\.(?=\s|$)/gu, "$1$2");
     s = s.replace(/-/g, " ");
     s = s.replace(/\s+/g, " ").trim();
     const tokens = s.split(" ").filter((t2) => t2.length > 0);
@@ -2113,7 +2126,7 @@ ${statusChipRules}
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"1.2.1"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"1.3.0"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -2674,7 +2687,7 @@ ${statusChipRules}
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.2.1"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.3.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

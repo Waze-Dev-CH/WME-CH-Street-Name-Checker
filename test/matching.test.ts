@@ -61,6 +61,13 @@ describe("OfficialIndex.lookup cascade", () => {
     expect(m?.entry.namePart).toBe("Chemin de la Montaz");
   });
 
+  it("variant: multi-word abbreviation (Z.I.)", () => {
+    const local = new OfficialIndex([makeOfficial("Zone industrielle Champ Cheval")]);
+    const m = local.lookup("Z.I. Champ Cheval");
+    expect(m?.level).toBe("variant");
+    expect(m?.entry.namePart).toBe("Zone industrielle Champ Cheval");
+  });
+
   it("variant: glued German abbreviation", () => {
     const m = index.lookup("Bahnhofstr.");
     expect(m?.level).toBe("variant");

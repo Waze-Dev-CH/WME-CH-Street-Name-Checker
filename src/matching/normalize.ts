@@ -58,6 +58,18 @@ export const ABBREVIATIONS: AbbreviationRule[] = [
   { abbrev: "st", expansions: ["saint", "sankt"] },
   { abbrev: "ste", expansions: ["sainte"] },
   { abbrev: "str", expansions: ["strasse"] },
+  // multi-word expansions are supported (joined into the key as-is)
+  { abbrev: "zi", expansions: ["zone industrielle"] },
+  { abbrev: "za", expansions: ["zone artisanale"] },
+  { abbrev: "gd", expansions: ["grand"] },
+  { abbrev: "gde", expansions: ["grande"] },
+  { abbrev: "all", expansions: ["allee"], firstTokenOnly: true },
+  { abbrev: "esp", expansions: ["esplanade"], firstTokenOnly: true },
+  { abbrev: "anc", expansions: ["ancien", "ancienne"] },
+  { abbrev: "gen", expansions: ["general"] },
+  { abbrev: "dr", expansions: ["docteur"] },
+  { abbrev: "pt", expansions: ["petit"] },
+  { abbrev: "pte", expansions: ["petite"] },
 ];
 
 const ABBREV_MAP = new Map(ABBREVIATIONS.map((r) => [r.abbrev, r]));
@@ -148,6 +160,8 @@ export function k2(name: string): string[] {
   // German glued suffix: "bahnhofstr." / "bahnhofstr" -> "bahnhofstrasse".
   // Lookahead keeps "bahnhofstrasse" itself untouched.
   s = s.replace(/(\p{L}{2,})str\.?(?=$|\s|-)/gu, "$1strasse");
+  // collapse spaced initialisms so "Z. I." reaches the table as "zi"
+  s = s.replace(/\b(\p{L})\. ?(\p{L})\.(?=\s|$)/gu, "$1$2");
   s = s.replace(/-/g, " ");
   s = s.replace(/\s+/g, " ").trim();
 

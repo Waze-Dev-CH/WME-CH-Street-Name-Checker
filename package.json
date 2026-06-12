@@ -1,6 +1,6 @@
 {
   "name": "wme-ch-street-name-checker",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "WME userscript validating Waze street names against the official Swiss street register (swisstopo)",
   "type": "module",
   "private": true,

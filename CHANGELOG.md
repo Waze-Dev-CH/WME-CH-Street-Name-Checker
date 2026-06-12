@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.3.0] - 2026-06-12
+
+### Added
+- Multi-word and Romandie abbreviations in the matcher: Z.I. / Z. I. / ZI -> Zone industrielle (reported on "Z.I. Champ Cheval"), ZA -> Zone artisanale, Gd/Gde -> Grand/Grande, All. -> Allee, Esp. -> Esplanade, Anc. -> Ancien/Ancienne, Gen. -> General, Dr -> Docteur, Pt/Pte -> Petit/Petite. Spaced initialisms ("Z. I.") are collapsed before expansion.
+
 ## [1.2.1] - 2026-06-12
 
 ### Fixed

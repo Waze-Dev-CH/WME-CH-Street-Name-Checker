@@ -135,6 +135,20 @@ describe("k2 (expanded)", () => {
     expect(intersects("St. Gallerstrasse", "Sankt Gallerstrasse")).toBe(true);
   });
 
+  it("expands Swiss multi-word abbreviations (Z.I., ZA)", () => {
+    expect(intersects("Z.I. Champ Cheval", "Zone industrielle Champ Cheval")).toBe(true);
+    expect(intersects("Z. I. Champ Cheval", "Zone industrielle Champ Cheval")).toBe(true);
+    expect(intersects("ZI Champ Cheval", "Zone industrielle Champ Cheval")).toBe(true);
+    expect(intersects("ZA du Vivier", "Zone artisanale du Vivier")).toBe(true);
+  });
+
+  it("expands Romandie abbreviations (Gd, Gén., Dr, Pte)", () => {
+    expect(intersects("Gd-Rue", "Grand-Rue")).toBe(true);
+    expect(intersects("Av. du Gén. Guisan", "Avenue du Général Guisan")).toBe(true);
+    expect(intersects("Rue du Dr Schwab", "Rue du Docteur Schwab")).toBe(true);
+    expect(intersects("Pte Rue", "Petite Rue")).toBe(true);
+  });
+
   it("expands glued German -str. suffix", () => {
     expect(intersects("Bahnhofstr.", "Bahnhofstrasse")).toBe(true);
     expect(intersects("Bahnhofstr", "Bahnhofstrasse")).toBe(true);
