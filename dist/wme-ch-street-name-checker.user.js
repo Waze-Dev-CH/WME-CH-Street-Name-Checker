@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.9.0
+// @version      1.9.1
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -782,8 +782,8 @@
   }
 
   // src/fix.ts
-  var GROUP_FIX_CAP = 25;
-  var GROUP_FIX_CONFIRM_THRESHOLD = 5;
+  var GROUP_FIX_CAP = 50;
+  var GROUP_FIX_CONFIRM_THRESHOLD = 20;
   function formatFixError(outcome) {
     if (outcome.errorCode) return t(outcome.errorCode);
     return outcome.errorDetail ?? "?";
@@ -2331,7 +2331,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid #ccc; border-radius: 3p
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"1.9.0"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"1.9.1"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -2962,7 +2962,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid #ccc; border-radius: 3p
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.9.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.9.1"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

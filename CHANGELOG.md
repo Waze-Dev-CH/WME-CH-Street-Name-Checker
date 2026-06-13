@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.9.1] - 2026-06-13
+
+### Changed
+- Batch fix is less interruptive and handles bigger groups: the confirmation prompt now only appears above 20 segments (was above 5), and the hard cap per group action is raised from 25 to 50. Groups of 21 to 50 ask for confirmation; larger groups are still capped at 50. Nothing is auto-saved either way.
+
 ## [1.9.0] - 2026-06-13
 
 ### Changed

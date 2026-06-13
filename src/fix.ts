@@ -4,8 +4,8 @@ import { log } from "./log";
 import type { Issue } from "./matching/evaluate";
 import type { Settings } from "./settings";
 
-export const GROUP_FIX_CAP = 25;
-export const GROUP_FIX_CONFIRM_THRESHOLD = 5;
+export const GROUP_FIX_CAP = 50;
+export const GROUP_FIX_CONFIRM_THRESHOLD = 20;
 
 /** Error codes double as i18n string keys (see src/i18n.ts). */
 export type FixErrorCode =
