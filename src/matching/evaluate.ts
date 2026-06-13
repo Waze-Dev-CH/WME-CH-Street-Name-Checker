@@ -130,38 +130,41 @@ export function evaluateSegment(
 
   const match = index.lookup(currentName, locality);
   if (match) {
-    if (match.level === "exact") {
-      // Geometry check: the name is official somewhere, but is it the street
-      // actually under this segment? Only flag when the matched street is
-      // clearly far away AND another official street is clearly underneath.
-      const ownDistanceM =
-        nearest && nearest.distanceM <= SUGGEST_MAX_M
-          ? Math.min(...match.candidates.map((c) => distanceToEntryM(segment.geometry, c)))
-          : Infinity;
-      if (
-        nearest &&
-        nearest.distanceM <= SUGGEST_MAX_M &&
-        nearest.coverage >= WRONG_STREET_MIN_COVERAGE &&
-        k1(nearest.entry.namePart) !== k1(currentName) &&
-        !nearest.entry.street.label.includes(currentName) &&
-        ownDistanceM > FAR_STREET_M
-      ) {
-        return {
-          kind: "issue",
-          issue: {
-            ...baseIssue,
-            status: "WRONG_STREET",
-            suggestion: nearest.entry.namePart,
-            note: {
-              ...(noteFor(nearest.entry) ?? {}),
-              existsIn: match.entry.street.zipLabel,
-              // review aid: how far the current name's own axis really is
-              ...(Number.isFinite(ownDistanceM) ? { ownDistanceM: Math.round(ownDistanceM) } : {}),
-            },
-            fixable: true,
+    // Geometry takes precedence over name-only verdicts: when the name matches
+    // an official street SOMEWHERE but a DIFFERENT official street clearly runs
+    // under this segment, this is WRONG_STREET regardless of how well the name
+    // matched (exact, or a mere cosmetic/variant/near/stem fix). Otherwise the
+    // editor would correct the spelling first and only then be told the street
+    // itself is wrong - two edits for one segment.
+    const ownDistanceM =
+      nearest && nearest.distanceM <= SUGGEST_MAX_M
+        ? Math.min(...match.candidates.map((c) => distanceToEntryM(segment.geometry, c)))
+        : Infinity;
+    if (
+      nearest &&
+      nearest.distanceM <= SUGGEST_MAX_M &&
+      nearest.coverage >= WRONG_STREET_MIN_COVERAGE &&
+      k1(nearest.entry.namePart) !== k1(currentName) &&
+      !nearest.entry.street.label.includes(currentName) &&
+      ownDistanceM > FAR_STREET_M
+    ) {
+      return {
+        kind: "issue",
+        issue: {
+          ...baseIssue,
+          status: "WRONG_STREET",
+          suggestion: nearest.entry.namePart,
+          note: {
+            ...(noteFor(nearest.entry) ?? {}),
+            existsIn: match.entry.street.zipLabel,
+            // review aid: how far the current name's own axis really is
+            ...(Number.isFinite(ownDistanceM) ? { ownDistanceM: Math.round(ownDistanceM) } : {}),
           },
-        };
-      }
+          fixable: true,
+        },
+      };
+    }
+    if (match.level === "exact") {
       if (locality && !match.inLocality) {
         return {
           kind: "issue",

@@ -266,6 +266,28 @@ describe("geometry matching", () => {
     }
   });
 
+  it("flags WRONG_STREET up front even when the name only needs a cosmetic fix", () => {
+    // The current name is a near-match of "Chemin du Lac" (official 200 m away),
+    // but the segment lies under "Route de Berne". Geometry must win first time:
+    // without the hierarchy the editor would fix the spelling, then on the next
+    // scan be told the street is wrong (two edits).
+    const officials = [axis("Route de Berne", 0), axis("Chemin du Lac", 200)];
+    const { idx, nearest } = nearestFor(officials, 5);
+    const v = evaluateSegment(
+      makeSegment({ geometry: segGeometry(5) } as Partial<Segment>),
+      makeAddress("chemin du lac"),
+      idx,
+      settings,
+      nearest,
+    );
+    expect(v.kind).toBe("issue");
+    if (v.kind === "issue") {
+      expect(v.issue.status).toBe("WRONG_STREET");
+      expect(v.issue.suggestion).toBe("Route de Berne");
+      expect(v.issue.note?.ownDistanceM).toBeGreaterThan(150);
+    }
+  });
+
   it("does NOT flag WRONG_STREET when the named street is also nearby (corner case)", () => {
     const officials = [axis("Route de Berne", 0), axis("Chemin du Lac", 20)];
     const { idx, nearest } = nearestFor(officials, 5);

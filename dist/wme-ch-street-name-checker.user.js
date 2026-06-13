@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.8.1
+// @version      1.9.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -1520,25 +1520,25 @@
     const locality = settings.cityScoping !== "off" && address.city?.name ? k1(address.city.name) : void 0;
     const match = index.lookup(currentName, locality);
     if (match) {
+      const ownDistanceM = nearest && nearest.distanceM <= SUGGEST_MAX_M ? Math.min(...match.candidates.map((c) => distanceToEntryM(segment.geometry, c))) : Infinity;
+      if (nearest && nearest.distanceM <= SUGGEST_MAX_M && nearest.coverage >= WRONG_STREET_MIN_COVERAGE && k1(nearest.entry.namePart) !== k1(currentName) && !nearest.entry.street.label.includes(currentName) && ownDistanceM > FAR_STREET_M) {
+        return {
+          kind: "issue",
+          issue: {
+            ...baseIssue,
+            status: "WRONG_STREET",
+            suggestion: nearest.entry.namePart,
+            note: {
+              ...noteFor(nearest.entry) ?? {},
+              existsIn: match.entry.street.zipLabel,
+              // review aid: how far the current name's own axis really is
+              ...Number.isFinite(ownDistanceM) ? { ownDistanceM: Math.round(ownDistanceM) } : {}
+            },
+            fixable: true
+          }
+        };
+      }
       if (match.level === "exact") {
-        const ownDistanceM = nearest && nearest.distanceM <= SUGGEST_MAX_M ? Math.min(...match.candidates.map((c) => distanceToEntryM(segment.geometry, c))) : Infinity;
-        if (nearest && nearest.distanceM <= SUGGEST_MAX_M && nearest.coverage >= WRONG_STREET_MIN_COVERAGE && k1(nearest.entry.namePart) !== k1(currentName) && !nearest.entry.street.label.includes(currentName) && ownDistanceM > FAR_STREET_M) {
-          return {
-            kind: "issue",
-            issue: {
-              ...baseIssue,
-              status: "WRONG_STREET",
-              suggestion: nearest.entry.namePart,
-              note: {
-                ...noteFor(nearest.entry) ?? {},
-                existsIn: match.entry.street.zipLabel,
-                // review aid: how far the current name's own axis really is
-                ...Number.isFinite(ownDistanceM) ? { ownDistanceM: Math.round(ownDistanceM) } : {}
-              },
-              fixable: true
-            }
-          };
-        }
         if (locality && !match.inLocality) {
           return {
             kind: "issue",
@@ -2331,7 +2331,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid #ccc; border-radius: 3p
     }
     buildFooter() {
       const footer = el("div", "chk-footer");
-      footer.appendChild(el("span", "chk-muted", `v${"1.8.1"} · `));
+      footer.appendChild(el("span", "chk-muted", `v${"1.9.0"} · `));
       const link = el("a", "", "Changelog");
       link.href = "https://github.com/Neprena/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
@@ -2962,7 +2962,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid #ccc; border-radius: 3p
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.8.1"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.9.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

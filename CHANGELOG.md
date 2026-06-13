@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.9.0] - 2026-06-13
+
+### Changed
+- Geometry now takes precedence over name-only verdicts. When a segment's name only needed a small fix (cosmetic, variant, typo or way-type) but a different official street clearly runs underneath, the script reports WRONG_STREET right away instead of first suggesting the spelling fix and only flagging the wrong street on the next scan. This avoids editing the same segment twice. The safeguard is unchanged: WRONG_STREET still requires the matched name's own axis to be far away (> 40 m) with the other street covering most of the segment, so a genuine typo on the correct street is left as a plain name fix.
+
 ## [1.8.1] - 2026-06-12
 
 ### Fixed
