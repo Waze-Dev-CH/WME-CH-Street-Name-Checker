@@ -4,7 +4,7 @@
 
 # WME CH Street Name Checker
 
-**[➜ Installer / Installieren / Installa / Install](https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js)** · [Changelog](CHANGELOG.md) · Licence MIT · © Data: swisstopo
+**[➜ Installer / Installieren / Installa / Install](https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js)** · [Greasy Fork](https://greasyfork.org/scripts/582690-wme-ch-street-name-checker) · [Changelog](CHANGELOG.md) · Licence MIT · © Data: swisstopo
 
 Userscript Tampermonkey pour le [Waze Map Editor](https://www.waze.com/editor) - validation des noms de rues contre le répertoire officiel suisse. Interface disponible en français, allemand, italien et anglais.
 
@@ -27,7 +27,8 @@ Compare les noms de rues des segments visibles avec le **répertoire officiel de
 - Matching géométrique (désactivable): les axes officiels sont appariés spatialement aux segments - suggestions 1-clic pour les segments sans nom, détection de la mauvaise rue, désambiguïsation par distance. Anti-faux-positifs: filtre d'orientation (les transversales ne concourent pas), couverture minimale du segment, abstention en cas de rues quasi équidistantes.
 - Routes cantonales/nationales hors localité: un nom introuvable sur une route principale est accepté si un axe officiel du même nom existe à moins de 3 km (prolongement du nom de la commune voisine, ex. Route de Berne entre Payerne et Corcelles). Les désignations numérotées (A9, E62, A9 - E62) sont acceptées sur les types autoroutiers.
 - Communes bilingues (Biel/Bienne…): les libellés officiels `A/B` sont acceptés en entier et pour chaque partie; un nom alternatif Waze qui correspond compte comme OK (réglable).
-- Contrôles des règles d'édition de Suisse romande (sans donnée externe, désactivables): micro-segments, boucles à 1-2 segments, mauvais usage du type Rue étroite. Statuts informatifs, sans correction automatique.
+- Contrôles des règles d'édition de Suisse romande (sans donnée externe, désactivables): micro-segments, boucles à 1-2 segments, mauvais usage du type Rue étroite, niveau de verrouillage hors standard suisse (trop bas/trop haut selon le type de route). Statuts informatifs, sans correction automatique.
+- Filtre "seulement les segments modifiables" (désactivé par défaut): masque partout (liste, carte, compteurs) les segments verrouillés au-dessus de ton niveau d'éditeur.
 - Réglages persistants: types de routes ET types d'erreurs vérifiés (case par statut), scoping par localité (off/warn/strict), labels carte, zoom minimal, conservation de l'ancien nom en alternatif, langue.
 
 ## Statuts
@@ -41,15 +42,18 @@ Compare les noms de rues des segments visibles avec le **répertoire officiel de
 | `WRONG_STREET` | Nom valide, mais la rue officielle sous le segment porte un autre nom | rouge foncé |
 | `WRONG_CITY` | Le nom existe, mais dans une autre localité (mode scoping) | rose |
 | `NOT_FOUND` | Introuvable dans le répertoire officiel | rouge |
-| `UNNAMED` | Segment vérifiable sans nom; la rue officielle dessous est proposée en 1 clic | violet pointillé |
+| `UNNAMED` | Segment à nommer: type vérifié sans nom; la rue officielle dessous est proposée en 1 clic (ou tout segment sans nom si le matching géométrique est désactivé) | violet pointillé |
+| `UNDER_LOCK` | Verrou plus bas que le minimum suisse pour ce type de route (Autoroute L5, Voie rapide L4, Semi-autoroute L3, Route principale L2, Rue L1) | rose foncé pointillé |
 | `MICRO_SEGMENT` | Segment carrossable < 5 m (ronds-points exclus) | cyan |
 | `LOOP` | Boucle de moins de 3 segments (nœuds d'extrémité identiques) | brun |
 | `NARROW_MISUSE` | Rue étroite à sens unique ou < 50 m | indigo pointillé |
+| `OVER_LOCK` | Verrou plus haut que le minimum suisse (souvent volontaire) | gris-bleu pointillé |
+| `UNNAMED_NO_MATCH` | Sans nom et aucune rue officielle dessous (matching géométrique) — généralement normal, masqué par défaut | gris pointillé |
 
 ## Installation
 
 1. Installer [Tampermonkey](https://www.tampermonkey.net/) (sous Chrome: activer le mode développeur dans `chrome://extensions`).
-2. [Cliquer ici pour installer le script](https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js) - les mises à jour sont ensuite automatiques.
+2. Installer le script, depuis [GitHub](https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js) ou via [Greasy Fork](https://greasyfork.org/scripts/582690-wme-ch-street-name-checker) - les mises à jour sont ensuite automatiques.
 
 </details>
 
@@ -72,7 +76,8 @@ Vergleicht die Strassennamen der sichtbaren Segmente mit dem **amtlichen Strasse
 - Geometrie-Matching (abschaltbar): amtliche Strassenachsen werden räumlich den Segmenten zugeordnet - 1-Klick-Vorschläge für unbenannte Segmente, Falsche-Strasse-Erkennung, Distanz-Disambiguierung. Gegen Fehlalarme: Richtungsfilter (Querstrassen konkurrieren nie), Mindestabdeckung des Segments, Enthaltung bei fast gleich nahen Strassen.
 - Ausserortsstrecken von Kantons-/Nationalstrassen: ein unauffindbarer Name auf einer Hauptstrasse wird akzeptiert, wenn eine gleichnamige amtliche Achse innerhalb von 3 km existiert (Fortsetzung aus der Nachbargemeinde). Nummerierte Bezeichnungen (A9, E62, A9 - E62) werden auf Autobahn-Typen akzeptiert.
 - Zweisprachige Gemeinden (Biel/Bienne…): amtliche `A/B`-Bezeichnungen werden als Ganzes und je Teil akzeptiert; ein passender Alternativname zählt als OK (einstellbar).
-- Schweizer Regelprüfungen (ohne externe Daten, abschaltbar): Mikrosegmente, Schleifen aus 1-2 Segmenten, falsch verwendete enge Strassen. Nur informativ, keine automatische Korrektur.
+- Schweizer Regelprüfungen (ohne externe Daten, abschaltbar): Mikrosegmente, Schleifen aus 1-2 Segmenten, falsch verwendete enge Strassen, Sperrstufe ausserhalb des Schweizer Standards (zu niedrig/zu hoch je Strassentyp). Nur informativ, keine automatische Korrektur.
+- Filter "nur bearbeitbare Segmente" (standardmässig aus): blendet überall (Liste, Karte, Zähler) Segmente aus, die über dem eigenen Editor-Rang gesperrt sind.
 - Persistente Einstellungen: geprüfte Strassentypen UND Fehlertypen (Checkbox je Status), Ortschafts-Scoping, Kartenbeschriftung, Mindestzoom, alten Namen als Alternative behalten, Sprache.
 
 ## Status
@@ -86,15 +91,18 @@ Vergleicht die Strassennamen der sichtbaren Segmente mit dem **amtlichen Strasse
 | `WRONG_STREET` | Gültiger Name, aber die amtliche Strasse unter dem Segment heisst anders | dunkelrot |
 | `WRONG_CITY` | Name existiert, aber in anderer Ortschaft (Scoping-Modus) | rosa |
 | `NOT_FOUND` | Nicht im amtlichen Verzeichnis | rot |
-| `UNNAMED` | Geprüfter Strassentyp ohne Namen; die amtliche Strasse darunter wird mit 1 Klick vorgeschlagen | violett gestrichelt |
+| `UNNAMED` | Zu benennendes Segment: geprüfter Typ ohne Namen; die amtliche Strasse darunter wird mit 1 Klick vorgeschlagen (oder jedes unbenannte Segment, wenn Geometrie-Matching aus ist) | violett gestrichelt |
+| `UNDER_LOCK` | Sperrstufe unter dem Schweizer Minimum für den Strassentyp (Autobahn L5, Schnellstrasse L4, Halbautobahn L3, Hauptstrasse L2, Strasse L1) | dunkelrosa gestrichelt |
 | `MICRO_SEGMENT` | Befahrbares Segment < 5 m (Kreisel ausgenommen) | cyan |
 | `LOOP` | Schleife aus weniger als 3 Segmenten (gleiche Endknoten) | braun |
 | `NARROW_MISUSE` | Enge Strasse als Einbahn oder < 50 m | indigo gestrichelt |
+| `OVER_LOCK` | Sperrstufe über dem Schweizer Minimum (oft beabsichtigt) | blaugrau gestrichelt |
+| `UNNAMED_NO_MATCH` | Ohne Namen und keine amtliche Strasse darunter (Geometrie-Matching) — meist normal, standardmässig ausgeblendet | grau gestrichelt |
 
 ## Installation
 
 1. [Tampermonkey](https://www.tampermonkey.net/) installieren (Chrome: Entwicklermodus in `chrome://extensions` aktivieren).
-2. [Hier klicken, um das Skript zu installieren](https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js) - Updates erfolgen danach automatisch.
+2. Das Skript installieren, von [GitHub](https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js) oder über [Greasy Fork](https://greasyfork.org/scripts/582690-wme-ch-street-name-checker) - Updates erfolgen danach automatisch.
 
 </details>
 
@@ -117,7 +125,8 @@ Confronta i nomi delle strade dei segmenti visibili con il **repertorio ufficial
 - Matching geometrico (disattivabile): gli assi ufficiali sono abbinati spazialmente ai segmenti - suggerimenti in 1 clic per i segmenti senza nome, rilevamento della strada errata, disambiguazione per distanza. Contro i falsi positivi: filtro di orientamento (le trasversali non competono), copertura minima del segmento, astensione con strade quasi equidistanti.
 - Strade cantonali/nazionali fuori località: un nome introvabile su una strada principale è accettato se un asse ufficiale omonimo esiste entro 3 km (continuazione dal comune vicino). Le designazioni numerate (A9, E62, A9 - E62) sono accettate sui tipi autostradali.
 - Comuni bilingui (Biel/Bienne…): le denominazioni ufficiali `A/B` sono accettate per intero e per ciascuna parte; un nome alternativo corrispondente conta come OK (regolabile).
-- Controlli delle regole svizzere (senza dati esterni, disattivabili): micro-segmenti, anelli di 1-2 segmenti, uso scorretto del tipo Strada stretta. Solo informativi, nessuna correzione automatica.
+- Controlli delle regole svizzere (senza dati esterni, disattivabili): micro-segmenti, anelli di 1-2 segmenti, uso scorretto del tipo Strada stretta, livello di blocco fuori dallo standard svizzero (troppo basso/troppo alto per il tipo di strada). Solo informativi, nessuna correzione automatica.
+- Filtro "solo i segmenti modificabili" (disattivato per impostazione predefinita): nasconde ovunque (elenco, mappa, contatori) i segmenti bloccati oltre il proprio livello di editor.
 - Impostazioni persistenti: tipi di strada E tipi di errore verificati (casella per stato), scoping per località, etichette sulla mappa, zoom minimo, mantenere il vecchio nome come alternativo, lingua.
 
 ## Stati
@@ -131,15 +140,18 @@ Confronta i nomi delle strade dei segmenti visibili con il **repertorio ufficial
 | `WRONG_STREET` | Nome valido, ma la strada ufficiale sotto il segmento ha un altro nome | rosso scuro |
 | `WRONG_CITY` | Il nome esiste, ma in un'altra località (scoping) | rosa |
 | `NOT_FOUND` | Assente dal repertorio ufficiale | rosso |
-| `UNNAMED` | Tipo verificato senza nome; la strada ufficiale sottostante è proposta in 1 clic | viola tratteggiato |
+| `UNNAMED` | Segmento da nominare: tipo verificato senza nome; la strada ufficiale sottostante è proposta in 1 clic (o qualsiasi segmento senza nome se il matching geometrico è disattivato) | viola tratteggiato |
+| `UNDER_LOCK` | Livello di blocco sotto il minimo svizzero per il tipo di strada (Autostrada L5, Semiautostrada L4, Strada di transito L3, Strada principale L2, Strada L1) | rosa scuro tratteggiato |
 | `MICRO_SEGMENT` | Segmento percorribile < 5 m (rotatorie escluse) | ciano |
 | `LOOP` | Anello con meno di 3 segmenti (stessi nodi) | marrone |
 | `NARROW_MISUSE` | Strada stretta a senso unico o < 50 m | indaco tratteggiato |
+| `OVER_LOCK` | Livello di blocco sopra il minimo svizzero (spesso intenzionale) | grigio-blu tratteggiato |
+| `UNNAMED_NO_MATCH` | Senza nome e nessuna strada ufficiale sotto (matching geometrico) — di solito normale, nascosto per impostazione predefinita | grigio tratteggiato |
 
 ## Installazione
 
 1. Installare [Tampermonkey](https://www.tampermonkey.net/) (Chrome: attivare la modalità sviluppatore in `chrome://extensions`).
-2. [Clicca qui per installare lo script](https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js) - gli aggiornamenti sono poi automatici.
+2. Installare lo script, da [GitHub](https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js) oppure da [Greasy Fork](https://greasyfork.org/scripts/582690-wme-ch-street-name-checker) - gli aggiornamenti sono poi automatici.
 
 </details>
 
@@ -162,7 +174,8 @@ Compares the street names of visible segments with the Swiss federal **official 
 - Geometry matching (toggleable): official street axes are matched spatially against segments - one-click suggestions for unnamed segments, wrong-street detection, distance disambiguation. False-positive guards: bearing filter (cross streets never compete), minimum segment coverage, abstention when two streets are nearly equidistant.
 - Out-of-locality cantonal/national roads: a NOT_FOUND name on a main road is accepted when a same-named official axis exists within 3 km (continuation from the neighboring commune, e.g. Route de Berne between Payerne and Corcelles). Numbered designations (A9, E62, A9 - E62) are accepted on highway types.
 - Bilingual communes (Biel/Bienne…): official `A/B` labels accepted as a whole and per part; a matching alternate name counts as OK (configurable).
-- Swiss guideline checks (no external data, toggleable): micro-segments, 1-2 segment loops, Narrow Street misuse. Informational only, no automatic fix.
+- Swiss guideline checks (no external data, toggleable): micro-segments, 1-2 segment loops, Narrow Street misuse, lock level outside the Swiss standard (too low/too high for the road type). Informational only, no automatic fix.
+- "Only segments I can edit" filter (off by default): hides everywhere (list, map, counters) the segments locked above your editor rank.
 - Persistent settings: checked road types AND issue types (checkbox per status), city scoping, map labels, minimum zoom, keep old name as alternate, language.
 
 ## Statuses
@@ -176,15 +189,18 @@ Compares the street names of visible segments with the Swiss federal **official 
 | `WRONG_STREET` | Valid name, but the official street under the segment has another name | dark red |
 | `WRONG_CITY` | Name exists, but in another locality (scoping mode) | pink |
 | `NOT_FOUND` | Not in the official register | red |
-| `UNNAMED` | Checked road type without a name; the official street underneath is suggested in one click | dashed violet |
+| `UNNAMED` | Segment to be named: checked road type without a name; the official street underneath is suggested in one click (or any unnamed segment when geometry matching is off) | dashed violet |
+| `UNDER_LOCK` | Lock level below the Swiss minimum for the road type (Freeway L5, Major Highway L4, Minor Highway L3, Primary Street L2, Street L1) | dashed crimson |
 | `MICRO_SEGMENT` | Drivable segment < 5 m (roundabouts excluded) | cyan |
 | `LOOP` | Loop made of fewer than 3 segments (same endpoints) | brown |
 | `NARROW_MISUSE` | Narrow Street one-way or < 50 m | dashed indigo |
+| `OVER_LOCK` | Lock level above the Swiss minimum (often intentional) | dashed grey-blue |
+| `UNNAMED_NO_MATCH` | Unnamed and no official street underneath (geometry matching) — usually legitimate, hidden by default | dashed grey |
 
 ## Installation
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) (Chrome: enable developer mode in `chrome://extensions`).
-2. [Click here to install the script](https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js) - updates are then automatic.
+2. Install the script, from [GitHub](https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js) or from [Greasy Fork](https://greasyfork.org/scripts/582690-wme-ch-street-name-checker) - updates are then automatic.
 
 </details>
 
