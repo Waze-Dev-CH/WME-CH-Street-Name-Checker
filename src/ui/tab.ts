@@ -164,6 +164,9 @@ export function geometryIntersectsBbox(geometry: LineString, bbox: Bbox): boolea
   return minLon <= bbox[2] && maxLon >= bbox[0] && minLat <= bbox[3] && maxLat >= bbox[1];
 }
 
+/** Delay before the "updating" veil appears, to avoid flashing on quick rescans. */
+const BUSY_DELAY_MS = 250;
+
 export class TabUI {
   private pane!: HTMLElement;
   private statusLine!: HTMLElement;
@@ -177,6 +180,9 @@ export class TabUI {
   private selectedSegmentIds = new Set<number>();
   private orderedIssueIds: number[] = [];
   private nextIssuePointer = -1;
+  private listBox!: HTMLElement;
+  /** Pending timer that veils the list; null when idle or already veiled. */
+  private busyTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private sdk: WmeSDK,
@@ -239,14 +245,17 @@ export class TabUI {
     this.statusLine = el("div", "chk-banner", t("stateIdle"));
     this.chipsBox = el("div", "chk-chips");
     this.groupsBox = el("div", "chk-groups");
+    this.listBox = el("div", "chk-list");
+    const busy = el("div", "chk-busy");
+    busy.append(el("span", "chk-spinner"), el("span", "chk-busy-text", t("updating")));
+    this.listBox.append(this.chipsBox, this.groupsBox, busy);
 
     this.pane.append(
       brand,
       toolbar,
       this.statusLine,
       this.buildMasterToggles(),
-      this.chipsBox,
-      this.groupsBox,
+      this.listBox,
       this.buildLegend(),
       this.buildSettings(),
       this.buildFooter(),
@@ -357,6 +366,7 @@ export class TabUI {
     this.statusLine.textContent = statusText;
     this.statusLine.classList.toggle("chk-error", state === "error");
     this.statusLine.classList.toggle("chk-banner-ok", state === "done" && inViewport.length === 0);
+    this.setBusy(state === "fetching" || state === "evaluating");
 
     this.unsavedBadge.textContent =
       snapshot.unsavedCount > 0 ? t("unsavedBadge", { n: snapshot.unsavedCount }) : "";
@@ -373,6 +383,26 @@ export class TabUI {
     this.orderedIssueIds = groups.flatMap((g) => g.issues.map((i) => i.segmentId));
     this.renderChips(inViewport);
     this.renderGroups(groups, visible.length, state);
+  }
+
+  /**
+   * Veil the issue list with a blur + spinner while a scan is in flight. Delayed
+   * so the frequent, fast rescans on map moves don't make it flash.
+   */
+  private setBusy(updating: boolean): void {
+    if (updating) {
+      if (this.busyTimer !== null || this.listBox.classList.contains("chk-busy-active")) return;
+      this.busyTimer = setTimeout(() => {
+        this.busyTimer = null;
+        this.listBox.classList.add("chk-busy-active");
+      }, BUSY_DELAY_MS);
+    } else {
+      if (this.busyTimer !== null) {
+        clearTimeout(this.busyTimer);
+        this.busyTimer = null;
+      }
+      this.listBox.classList.remove("chk-busy-active");
+    }
   }
 
   /** Read the visible map extent; null (filter disabled) on any SDK failure. */

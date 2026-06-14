@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.11.1
+// @version      1.12.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -371,6 +371,7 @@
     stateEvaluating: "Comparing names…",
     statePaused: "Paused (layer unchecked)",
     stateError: "Scan failed",
+    updating: "Updating…",
     stateDone: "{issues} issue(s) · {ok} OK · {streets} official streets",
     unsavedBadge: "{n} unsaved",
     rescan: "Rescan",
@@ -453,6 +454,7 @@
     stateEvaluating: "Comparaison des noms…",
     statePaused: "En pause (couche décochée)",
     stateError: "Échec du scan",
+    updating: "Mise à jour…",
     stateDone: "{issues} écart(s) · {ok} OK · {streets} rues officielles",
     unsavedBadge: "{n} non sauvegardé(s)",
     rescan: "Rescanner",
@@ -535,6 +537,7 @@
     stateEvaluating: "Namen werden verglichen…",
     statePaused: "Pausiert (Ebene deaktiviert)",
     stateError: "Scan fehlgeschlagen",
+    updating: "Aktualisierung…",
     stateDone: "{issues} Abweichung(en) · {ok} OK · {streets} amtliche Strassen",
     unsavedBadge: "{n} ungespeichert",
     rescan: "Neu scannen",
@@ -617,6 +620,7 @@
     stateEvaluating: "Confronto dei nomi…",
     statePaused: "In pausa (livello disattivato)",
     stateError: "Scansione fallita",
+    updating: "Aggiornamento…",
     stateDone: "{issues} differenze · {ok} OK · {streets} strade ufficiali",
     unsavedBadge: "{n} non salvati",
     rescan: "Riscansiona",
@@ -2188,6 +2192,14 @@ ${tokens}
 .chk-chip.chk-chip-active { border-color: var(--chk-primary); background: var(--chk-info-bg); color: var(--chk-primary); font-weight: 600; }
 .chk-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; flex-shrink: 0; }
 
+.chk-list { position: relative; display: flex; flex-direction: column; gap: 10px; }
+.chk-list.chk-busy-active { min-height: 90px; }
+.chk-busy { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 8px; z-index: 5; border-radius: var(--chk-radius); background: color-mix(in srgb, var(--chk-bg) 55%, transparent); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.chk-list.chk-busy-active .chk-busy { display: flex; }
+.chk-spinner { width: 26px; height: 26px; border: 3px solid var(--chk-border); border-top-color: var(--chk-primary); border-radius: 50%; animation: chk-spin .8s linear infinite; }
+.chk-busy-text { font-size: 12px; font-weight: 600; color: var(--chk-text); }
+@keyframes chk-spin { to { transform: rotate(360deg); } }
+
 .chk-groups { display: flex; flex-direction: column; gap: 5px; max-height: 48vh; overflow-y: auto; }
 .chk-group { flex-shrink: 0; border: 1px solid var(--chk-border); border-radius: var(--chk-radius); background: var(--chk-surface); }
 .chk-group-header { display: flex; align-items: center; gap: 6px; padding: 5px 8px; cursor: pointer; }
@@ -2364,6 +2376,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     if (!Number.isFinite(minLon)) return false;
     return minLon <= bbox[2] && maxLon >= bbox[0] && minLat <= bbox[3] && maxLat >= bbox[1];
   }
+  var BUSY_DELAY_MS = 250;
   var TabUI = class {
     constructor(sdk2, scanner, settings) {
       this.sdk = sdk2;
@@ -2385,6 +2398,9 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     selectedSegmentIds = /* @__PURE__ */ new Set();
     orderedIssueIds = [];
     nextIssuePointer = -1;
+    listBox;
+    /** Pending timer that veils the list; null when idle or already veiled. */
+    busyTimer = null;
     async init() {
       injectStyles();
       const { tabLabel, tabPane } = await this.sdk.Sidebar.registerScriptTab();
@@ -2418,7 +2434,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       brand.append(
         el("span", "chk-brand-icon", "🇨🇭"),
         el("span", "chk-brand-title", "CH Names"),
-        el("span", "chk-brand-version", `v${"1.11.1"}`)
+        el("span", "chk-brand-version", `v${"1.12.0"}`)
       );
       const toolbar = el("div", "chk-toolbar");
       const rescanBtn = el("button", "chk-btn", t("rescan"));
@@ -2432,13 +2448,16 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       this.statusLine = el("div", "chk-banner", t("stateIdle"));
       this.chipsBox = el("div", "chk-chips");
       this.groupsBox = el("div", "chk-groups");
+      this.listBox = el("div", "chk-list");
+      const busy = el("div", "chk-busy");
+      busy.append(el("span", "chk-spinner"), el("span", "chk-busy-text", t("updating")));
+      this.listBox.append(this.chipsBox, this.groupsBox, busy);
       this.pane.append(
         brand,
         toolbar,
         this.statusLine,
         this.buildMasterToggles(),
-        this.chipsBox,
-        this.groupsBox,
+        this.listBox,
         this.buildLegend(),
         this.buildSettings(),
         this.buildFooter()
@@ -2535,6 +2554,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       this.statusLine.textContent = statusText;
       this.statusLine.classList.toggle("chk-error", state === "error");
       this.statusLine.classList.toggle("chk-banner-ok", state === "done" && inViewport.length === 0);
+      this.setBusy(state === "fetching" || state === "evaluating");
       this.unsavedBadge.textContent = snapshot.unsavedCount > 0 ? t("unsavedBadge", { n: snapshot.unsavedCount }) : "";
       if (!force && issues === this.lastRenderedIssues) return;
       this.lastRenderedIssues = issues;
@@ -2543,6 +2563,25 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       this.orderedIssueIds = groups.flatMap((g) => g.issues.map((i) => i.segmentId));
       this.renderChips(inViewport);
       this.renderGroups(groups, visible.length, state);
+    }
+    /**
+     * Veil the issue list with a blur + spinner while a scan is in flight. Delayed
+     * so the frequent, fast rescans on map moves don't make it flash.
+     */
+    setBusy(updating) {
+      if (updating) {
+        if (this.busyTimer !== null || this.listBox.classList.contains("chk-busy-active")) return;
+        this.busyTimer = setTimeout(() => {
+          this.busyTimer = null;
+          this.listBox.classList.add("chk-busy-active");
+        }, BUSY_DELAY_MS);
+      } else {
+        if (this.busyTimer !== null) {
+          clearTimeout(this.busyTimer);
+          this.busyTimer = null;
+        }
+        this.listBox.classList.remove("chk-busy-active");
+      }
     }
     /** Read the visible map extent; null (filter disabled) on any SDK failure. */
     currentViewport() {
@@ -3157,7 +3196,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.11.1"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.12.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

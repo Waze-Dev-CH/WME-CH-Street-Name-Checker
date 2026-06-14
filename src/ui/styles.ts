@@ -82,6 +82,14 @@ ${tokens}
 .chk-chip.chk-chip-active { border-color: var(--chk-primary); background: var(--chk-info-bg); color: var(--chk-primary); font-weight: 600; }
 .chk-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; flex-shrink: 0; }
 
+.chk-list { position: relative; display: flex; flex-direction: column; gap: 10px; }
+.chk-list.chk-busy-active { min-height: 90px; }
+.chk-busy { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 8px; z-index: 5; border-radius: var(--chk-radius); background: color-mix(in srgb, var(--chk-bg) 55%, transparent); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.chk-list.chk-busy-active .chk-busy { display: flex; }
+.chk-spinner { width: 26px; height: 26px; border: 3px solid var(--chk-border); border-top-color: var(--chk-primary); border-radius: 50%; animation: chk-spin .8s linear infinite; }
+.chk-busy-text { font-size: 12px; font-weight: 600; color: var(--chk-text); }
+@keyframes chk-spin { to { transform: rotate(360deg); } }
+
 .chk-groups { display: flex; flex-direction: column; gap: 5px; max-height: 48vh; overflow-y: auto; }
 .chk-group { flex-shrink: 0; border: 1px solid var(--chk-border); border-radius: var(--chk-radius); background: var(--chk-surface); }
 .chk-group-header { display: flex; align-items: center; gap: 6px; padding: 5px 8px; cursor: pointer; }

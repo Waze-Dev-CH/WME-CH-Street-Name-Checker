@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.12.0] - 2026-06-14
+
+### Added
+- While a scan is running, the issue list is now veiled with a light blur, a spinning indicator and an "Updating…" label, and clicks on it are blocked so you never act on results that are about to change. The header, status banner (with the fetch progress) and settings stay available. The veil only appears after a short delay, so the frequent quick rescans triggered by panning the map don't make it flash.
+
 ## [1.11.1] - 2026-06-14
 
 ### Fixed
