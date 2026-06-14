@@ -23,7 +23,11 @@ export type IssueStatus =
   // Swiss guideline checks (see src/guidelines.ts):
   | "MICRO_SEGMENT"
   | "LOOP"
-  | "NARROW_MISUSE";
+  | "NARROW_MISUSE"
+  // Lock-level checks (see src/guidelines.ts): below / above the Swiss minimum
+  // expected for the road type.
+  | "UNDER_LOCK"
+  | "OVER_LOCK";
 
 /** Structured qualifiers, localized at display time by the UI. */
 export interface IssueNote {
@@ -35,6 +39,10 @@ export interface IssueNote {
   existsIn?: string;
   /** Distance to the official axis of the CURRENT name (WRONG_STREET review aid). */
   ownDistanceM?: number;
+  /** Current lock rank of the segment (UNDER_LOCK / OVER_LOCK). */
+  currentLock?: number;
+  /** Minimum lock rank expected for the road type (UNDER_LOCK / OVER_LOCK). */
+  expectedLock?: number;
 }
 
 export interface Issue {

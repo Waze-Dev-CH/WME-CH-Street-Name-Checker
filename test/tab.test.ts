@@ -1,7 +1,8 @@
 import type { LineString } from "geojson";
 import { describe, expect, it } from "vitest";
 import type { Issue, IssueStatus } from "../src/matching/evaluate";
-import { groupIssues } from "../src/ui/tab";
+import { formatNote, groupIssues } from "../src/ui/tab";
+import { setLocale } from "../src/i18n";
 
 const GEOMETRY: LineString = {
   type: "LineString",
@@ -28,6 +29,20 @@ function issue(status: IssueStatus, currentName: string): Issue {
     fixable: false,
   };
 }
+
+describe("formatNote", () => {
+  it("renders the lock delta", () => {
+    setLocale("en");
+    expect(formatNote({ currentLock: 3, expectedLock: 1 })).toBe("L3 → expected L1");
+    setLocale("fr");
+    expect(formatNote({ currentLock: 3, expectedLock: 1 })).toBe("L3 → attendu L1");
+    setLocale("en");
+  });
+
+  it("returns an empty string for a null note", () => {
+    expect(formatNote(null)).toBe("");
+  });
+});
 
 describe("groupIssues ordering", () => {
   it("sorts by severity first, volume second", () => {

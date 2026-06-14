@@ -6,6 +6,7 @@ import type { Issue } from "./matching/evaluate";
  * - MICRO_SEGMENT: drivable segment < 5 m (roundabouts excluded)
  * - LOOP: loop made of fewer than 3 segments (self-loop or same-endpoints pair)
  * - NARROW_MISUSE: Narrow Street (type 22) one-way or < 50 m
+ * - UNDER_LOCK / OVER_LOCK: lock rank below / above the Swiss minimum for the road type
  * Source: règles d'édition Suisse romande (forum/wiki condensé).
  */
 
@@ -15,6 +16,20 @@ const NARROW_STREET_TYPE = 22;
 
 /** Road types forming the drivable network (loops/micro-segments rules apply). */
 const DRIVABLE_TYPES = new Set([1, 2, 3, 4, 6, 7, 8, 17, 20, 22]);
+
+/**
+ * Minimum lock rank expected per road type (Swiss WME standard).
+ * DRAFT to validate against the Swiss wiki/forum before release. Road types not
+ * listed are not checked. Ramps (4) are excluded on purpose: their lock follows
+ * the highest connected segment, not a flat per-type table.
+ */
+const EXPECTED_LOCK_BY_ROAD_TYPE = new Map<number, number>([
+  [3, 5], // Freeway
+  [6, 4], // Major Highway
+  [7, 3], // Minor Highway
+  [2, 2], // Primary Street
+  [1, 1], // Street
+]);
 
 export type GetAddressFn = (segmentId: number) => SegmentAddress | null;
 
@@ -73,6 +88,23 @@ export function evaluateGuidelines(
       if (!issues.has(segment.id)) {
         const issue = makeIssue(segment, "NARROW_MISUSE", getAddress, swissCountryId);
         if (issue) issues.set(segment.id, issue);
+      }
+    }
+
+    // Lock rank below / above the Swiss minimum expected for the road type.
+    // Over-locking is often intentional, hence a separate, informative status.
+    const expectedLock = EXPECTED_LOCK_BY_ROAD_TYPE.get(segment.roadType);
+    if (
+      expectedLock !== undefined &&
+      typeof segment.lockRank === "number" &&
+      segment.lockRank !== expectedLock &&
+      !issues.has(segment.id)
+    ) {
+      const status = segment.lockRank < expectedLock ? "UNDER_LOCK" : "OVER_LOCK";
+      const issue = makeIssue(segment, status, getAddress, swissCountryId);
+      if (issue) {
+        issue.note = { ...(issue.note ?? {}), currentLock: segment.lockRank, expectedLock };
+        issues.set(segment.id, issue);
       }
     }
 

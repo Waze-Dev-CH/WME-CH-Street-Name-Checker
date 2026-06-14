@@ -117,3 +117,43 @@ describe("NARROW_MISUSE", () => {
     expect(evaluateGuidelines([s], noAddress)).toHaveLength(0);
   });
 });
+
+describe("lock level (UNDER_LOCK / OVER_LOCK)", () => {
+  it("flags a street locked below the Swiss minimum", () => {
+    const s = seg({ roadType: 1, lockRank: 0 } as Partial<Segment>); // expected L1
+    const issues = evaluateGuidelines([s], noAddress);
+    expect(statusOf(issues, s.id)).toBe("UNDER_LOCK");
+    const note = issues.find((i) => i.segmentId === s.id)?.note;
+    expect(note).toMatchObject({ currentLock: 0, expectedLock: 1 });
+  });
+
+  it("flags a street locked above the Swiss minimum", () => {
+    const s = seg({ roadType: 2, lockRank: 4 } as Partial<Segment>); // expected L2
+    const issues = evaluateGuidelines([s], noAddress);
+    expect(statusOf(issues, s.id)).toBe("OVER_LOCK");
+    expect(issues.find((i) => i.segmentId === s.id)?.note).toMatchObject({
+      currentLock: 4,
+      expectedLock: 2,
+    });
+  });
+
+  it("accepts a segment locked exactly at the expected minimum", () => {
+    const s = seg({ roadType: 6, lockRank: 4 } as Partial<Segment>); // expected L4
+    expect(evaluateGuidelines([s], noAddress)).toHaveLength(0);
+  });
+
+  it("never checks ramps (lock follows connectivity, not a flat table)", () => {
+    const s = seg({ roadType: 4, lockRank: 0 } as Partial<Segment>);
+    expect(evaluateGuidelines([s], noAddress)).toHaveLength(0);
+  });
+
+  it("ignores road types outside the lock table", () => {
+    const s = seg({ roadType: 8, lockRank: 0 } as Partial<Segment>); // Off-road, not listed
+    expect(evaluateGuidelines([s], noAddress)).toHaveLength(0);
+  });
+
+  it("does not apply Swiss lock rules to foreign segments", () => {
+    const s = seg({ roadType: 3, lockRank: 0 } as Partial<Segment>); // would be UNDER_LOCK in CH
+    expect(evaluateGuidelines([s], frenchAddress, 1)).toHaveLength(0);
+  });
+});

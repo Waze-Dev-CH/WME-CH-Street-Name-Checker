@@ -19,6 +19,11 @@ export function intersectsSwitzerland(bbox: Bbox): boolean {
   );
 }
 
+/** A segment is editable when the editor rank covers its lock. Rank unknown ⇒ all allowed (fail-open). */
+export function isEditableByRank(lockRank: number, userRank: number | null): boolean {
+  return userRank === null || userRank >= lockRank;
+}
+
 const DEBOUNCE_MS = 800;
 const BBOX_PADDING_RATIO = 0.2; // covers the WME data-model buffer beyond the viewport
 const MAX_AREA_KM2 = 6;
@@ -280,7 +285,15 @@ export class Scanner {
     const settings = this.settings.get();
     const issues = new Map<number, Issue>();
     const stats = { ok: 0, okAlt: 0, skipped: 0, total: 0 };
-    const segments = this.sdk.DataModel.Segments.getAll();
+    const allSegments = this.sdk.DataModel.Segments.getAll();
+    // "Editable only": drop segments locked above the current editor rank up front
+    // so they vanish from the list, the map layer and the counters alike. Rank
+    // unknown (e.g. not logged in) ⇒ fail-open, nothing is dropped.
+    const userRank = settings.editableOnly ? (this.sdk.State.getUserInfo()?.rank ?? null) : null;
+    const segments =
+      userRank === null
+        ? allSegments
+        : allSegments.filter((seg) => isEditableByRank((seg as Segment).lockRank, userRank));
     const spatial = settings.geometryMatching ? this.lastSpatialIndex : null;
     const swissCountryId = this.resolveSwissCountryId();
     for (let i = 0; i < segments.length; i++) {

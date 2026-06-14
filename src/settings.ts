@@ -42,9 +42,11 @@ export const ALL_STATUSES: IssueStatus[] = [
   "WRONG_CITY",
   "NOT_FOUND",
   "UNNAMED",
+  "UNDER_LOCK",
   "MICRO_SEGMENT",
   "LOOP",
   "NARROW_MISUSE",
+  "OVER_LOCK",
 ];
 
 export interface Settings {
@@ -68,6 +70,8 @@ export interface Settings {
   geometryMatching: boolean;
   /** List and counters show only segments currently within the map viewport. */
   viewportOnly: boolean;
+  /** Evaluate only segments the current editor rank can actually edit. */
+  editableOnly: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -86,6 +90,7 @@ export const DEFAULT_SETTINGS: Settings = {
   editPanelHelper: true,
   geometryMatching: true,
   viewportOnly: true,
+  editableOnly: false,
 };
 
 const STORAGE_KEY = "wme-ch-name-check.settings";

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.12.1
+// @version      1.13.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -387,6 +387,7 @@
     noteFullLabel: "full label: {label}",
     noteExistsIn: "exists in: {place}",
     noteOwnDistance: "its official axis is ~{m} m away",
+    noteLock: "L{current} → expected L{expected}",
     fixAll: "Fix all ({n})",
     fix: "Fix",
     fixTitle: 'Apply "{name}"',
@@ -404,12 +405,16 @@
     geometryMatchingTitle: "Enables UNNAMED suggestions, wrong-street detection and disambiguation by distance",
     viewportOnly: "Show only segments visible on the map",
     viewportOnlyTitle: "Filters the list and counters to the area currently on screen (no rescan)",
+    editableOnly: "Only segments I can edit",
+    editableOnlyTitle: "Hide segments locked above my editor rank",
     legendWRONG_CITY: "name exists, but in another locality (city scoping)",
     legendNOT_FOUND: "not found in the official register",
     legendUNNAMED: "checked road type without a street name, dashed line",
     legendMICRO_SEGMENT: "drivable segment shorter than 5 m (Swiss guideline; roundabouts excluded)",
     legendLOOP: "loop made of fewer than 3 segments (same endpoints); split it",
     legendNARROW_MISUSE: "Narrow Street misuse: one-way or shorter than 50 m",
+    legendUNDER_LOCK: "lock rank below the Swiss minimum for its road type",
+    legendOVER_LOCK: "lock rank above the Swiss minimum (often intentional)",
     guidelineChecks: "Swiss guideline checks (micro-segments, loops, narrow streets)",
     guidelineChecksTitle: "Checks from the Suisse romande editing guidelines that need no external data",
     helperOk: "matches the official register",
@@ -470,6 +475,7 @@
     noteFullLabel: "libellé complet: {label}",
     noteExistsIn: "existe à: {place}",
     noteOwnDistance: "son axe officiel à ~{m} m",
+    noteLock: "L{current} → attendu L{expected}",
     fixAll: "Tout corriger ({n})",
     fix: "Corriger",
     fixTitle: "Appliquer «{name}»",
@@ -487,12 +493,16 @@
     geometryMatchingTitle: "Active les suggestions UNNAMED, la détection de mauvaise rue et la désambiguïsation par distance",
     viewportOnly: "N'afficher que les segments visibles",
     viewportOnlyTitle: "Filtre la liste et les compteurs sur la zone actuellement à l'écran (sans relancer de scan)",
+    editableOnly: "Seulement les segments modifiables",
+    editableOnlyTitle: "Masquer les segments verrouillés au-dessus de mon niveau d'éditeur",
     legendWRONG_CITY: "le nom existe, mais dans une autre localité (scoping)",
     legendNOT_FOUND: "introuvable dans le répertoire officiel",
     legendUNNAMED: "type de route vérifié sans nom, trait pointillé",
     legendMICRO_SEGMENT: "segment carrossable de moins de 5 m (règle suisse; ronds-points exclus)",
     legendLOOP: "boucle de moins de 3 segments (nœuds identiques); à diviser",
     legendNARROW_MISUSE: "Rue étroite mal utilisée: sens unique ou moins de 50 m",
+    legendUNDER_LOCK: "verrou plus bas que le minimum suisse pour ce type de route",
+    legendOVER_LOCK: "verrou plus haut que le minimum suisse (souvent volontaire)",
     guidelineChecks: "Contrôles des règles suisses (micro-segments, boucles, rues étroites)",
     guidelineChecksTitle: "Contrôles issus des règles d'édition de Suisse romande, sans donnée externe",
     helperOk: "correspond au répertoire officiel",
@@ -553,6 +563,7 @@
     noteFullLabel: "vollständige Bezeichnung: {label}",
     noteExistsIn: "existiert in: {place}",
     noteOwnDistance: "amtliche Achse ~{m} m entfernt",
+    noteLock: "L{current} → erwartet L{expected}",
     fixAll: "Alle korrigieren ({n})",
     fix: "Korrigieren",
     fixTitle: "«{name}» übernehmen",
@@ -570,12 +581,16 @@
     geometryMatchingTitle: "Aktiviert UNNAMED-Vorschläge, Falsche-Strasse-Erkennung und Distanz-Disambiguierung",
     viewportOnly: "Nur auf der Karte sichtbare Segmente anzeigen",
     viewportOnlyTitle: "Filtert Liste und Zähler auf den aktuell sichtbaren Bereich (ohne erneuten Scan)",
+    editableOnly: "Nur bearbeitbare Segmente",
+    editableOnlyTitle: "Über meinem Rang gesperrte Segmente ausblenden",
     legendWRONG_CITY: "Name existiert, aber in einer anderen Ortschaft (Scoping)",
     legendNOT_FOUND: "nicht im amtlichen Verzeichnis",
     legendUNNAMED: "geprüfter Strassentyp ohne Namen, gestrichelt",
     legendMICRO_SEGMENT: "befahrbares Segment kürzer als 5 m (Schweizer Regel; Kreisel ausgenommen)",
     legendLOOP: "Schleife aus weniger als 3 Segmenten (gleiche Endknoten); aufteilen",
     legendNARROW_MISUSE: "Falsch verwendete enge Strasse: Einbahn oder kürzer als 50 m",
+    legendUNDER_LOCK: "Sperrstufe unter dem Schweizer Minimum für diesen Strassentyp",
+    legendOVER_LOCK: "Sperrstufe über dem Schweizer Minimum (oft beabsichtigt)",
     guidelineChecks: "Schweizer Regelprüfungen (Mikrosegmente, Schleifen, enge Strassen)",
     guidelineChecksTitle: "Prüfungen aus den Editier-Richtlinien der Romandie, ohne externe Daten",
     helperOk: "stimmt mit dem amtlichen Verzeichnis überein",
@@ -636,6 +651,7 @@
     noteFullLabel: "denominazione completa: {label}",
     noteExistsIn: "esiste a: {place}",
     noteOwnDistance: "asse ufficiale a ~{m} m",
+    noteLock: "L{current} → atteso L{expected}",
     fixAll: "Correggi tutti ({n})",
     fix: "Correggi",
     fixTitle: "Applica «{name}»",
@@ -653,12 +669,16 @@
     geometryMatchingTitle: "Attiva i suggerimenti UNNAMED, il rilevamento di strada errata e la disambiguazione per distanza",
     viewportOnly: "Mostra solo i segmenti visibili sulla mappa",
     viewportOnlyTitle: "Filtra l'elenco e i contatori sull'area attualmente visibile (senza nuova scansione)",
+    editableOnly: "Solo i segmenti modificabili",
+    editableOnlyTitle: "Nascondi i segmenti bloccati oltre il mio livello di editor",
     legendWRONG_CITY: "il nome esiste, ma in un'altra località (scoping)",
     legendNOT_FOUND: "non presente nel repertorio ufficiale",
     legendUNNAMED: "tipo di strada verificato senza nome, linea tratteggiata",
     legendMICRO_SEGMENT: "segmento percorribile più corto di 5 m (regola svizzera; rotatorie escluse)",
     legendLOOP: "anello con meno di 3 segmenti (stessi nodi); da dividere",
     legendNARROW_MISUSE: "Strada stretta usata male: senso unico o meno di 50 m",
+    legendUNDER_LOCK: "livello di blocco sotto il minimo svizzero per questo tipo di strada",
+    legendOVER_LOCK: "livello di blocco sopra il minimo svizzero (spesso intenzionale)",
     guidelineChecks: "Controlli delle regole svizzere (micro-segmenti, anelli, strade strette)",
     guidelineChecksTitle: "Controlli dalle regole di editing della Svizzera romanda, senza dati esterni",
     helperOk: "corrisponde al repertorio ufficiale",
@@ -731,9 +751,11 @@
     WRONG_CITY: { strokeColor: "#ff5ca8", strokeDashstyle: "solid" },
     NOT_FOUND: { strokeColor: "#e02020", strokeDashstyle: "solid" },
     UNNAMED: { strokeColor: "#9b59b6", strokeDashstyle: "dash" },
+    UNDER_LOCK: { strokeColor: "#c2185b", strokeDashstyle: "dash" },
     MICRO_SEGMENT: { strokeColor: "#00bcd4", strokeDashstyle: "solid" },
     LOOP: { strokeColor: "#795548", strokeDashstyle: "solid" },
-    NARROW_MISUSE: { strokeColor: "#3f51b5", strokeDashstyle: "dash" }
+    NARROW_MISUSE: { strokeColor: "#3f51b5", strokeDashstyle: "dash" },
+    OVER_LOCK: { strokeColor: "#90a4ae", strokeDashstyle: "dash" }
   };
   var HighlightLayer = class {
     constructor(sdk2, settings) {
@@ -880,6 +902,18 @@
   var MIN_NARROW_STREET_LENGTH_M = 50;
   var NARROW_STREET_TYPE = 22;
   var DRIVABLE_TYPES = /* @__PURE__ */ new Set([1, 2, 3, 4, 6, 7, 8, 17, 20, 22]);
+  var EXPECTED_LOCK_BY_ROAD_TYPE = /* @__PURE__ */ new Map([
+    [3, 5],
+    // Freeway
+    [6, 4],
+    // Major Highway
+    [7, 3],
+    // Minor Highway
+    [2, 2],
+    // Primary Street
+    [1, 1]
+    // Street
+  ]);
   function makeIssue(segment, status, getAddress, swissCountryId) {
     const address = getAddress(segment.id);
     if (swissCountryId !== null && address?.country && address.country.id !== swissCountryId) {
@@ -916,6 +950,15 @@
         if (!issues.has(segment.id)) {
           const issue = makeIssue(segment, "NARROW_MISUSE", getAddress, swissCountryId);
           if (issue) issues.set(segment.id, issue);
+        }
+      }
+      const expectedLock = EXPECTED_LOCK_BY_ROAD_TYPE.get(segment.roadType);
+      if (expectedLock !== void 0 && typeof segment.lockRank === "number" && segment.lockRank !== expectedLock && !issues.has(segment.id)) {
+        const status = segment.lockRank < expectedLock ? "UNDER_LOCK" : "OVER_LOCK";
+        const issue = makeIssue(segment, status, getAddress, swissCountryId);
+        if (issue) {
+          issue.note = { ...issue.note ?? {}, currentLock: segment.lockRank, expectedLock };
+          issues.set(segment.id, issue);
         }
       }
       if (isRoundabout || segment.fromNodeId === null || segment.toNodeId === null) continue;
@@ -1638,6 +1681,9 @@
   function intersectsSwitzerland(bbox) {
     return bbox[0] <= CH_BBOX[2] && bbox[2] >= CH_BBOX[0] && bbox[1] <= CH_BBOX[3] && bbox[3] >= CH_BBOX[1];
   }
+  function isEditableByRank(lockRank, userRank) {
+    return userRank === null || userRank >= lockRank;
+  }
   var DEBOUNCE_MS = 800;
   var BBOX_PADDING_RATIO = 0.2;
   var MAX_AREA_KM2 = 6;
@@ -1840,7 +1886,9 @@
       const settings = this.settings.get();
       const issues = /* @__PURE__ */ new Map();
       const stats = { ok: 0, okAlt: 0, skipped: 0, total: 0 };
-      const segments = this.sdk.DataModel.Segments.getAll();
+      const allSegments = this.sdk.DataModel.Segments.getAll();
+      const userRank = settings.editableOnly ? this.sdk.State.getUserInfo()?.rank ?? null : null;
+      const segments = userRank === null ? allSegments : allSegments.filter((seg) => isEditableByRank(seg.lockRank, userRank));
       const spatial = settings.geometryMatching ? this.lastSpatialIndex : null;
       const swissCountryId = this.resolveSwissCountryId();
       for (let i = 0; i < segments.length; i++) {
@@ -2033,9 +2081,11 @@
     "WRONG_CITY",
     "NOT_FOUND",
     "UNNAMED",
+    "UNDER_LOCK",
     "MICRO_SEGMENT",
     "LOOP",
-    "NARROW_MISUSE"
+    "NARROW_MISUSE",
+    "OVER_LOCK"
   ];
   var DEFAULT_SETTINGS = {
     version: 2,
@@ -2052,7 +2102,8 @@
     guidelineChecks: true,
     editPanelHelper: true,
     geometryMatching: true,
-    viewportOnly: true
+    viewportOnly: true,
+    editableOnly: false
   };
   var STORAGE_KEY = "wme-ch-name-check.settings";
   function migrateSettings(parsed) {
@@ -2276,9 +2327,11 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     WRONG_CITY: "legendWRONG_CITY",
     NOT_FOUND: "legendNOT_FOUND",
     UNNAMED: "legendUNNAMED",
+    UNDER_LOCK: "legendUNDER_LOCK",
     MICRO_SEGMENT: "legendMICRO_SEGMENT",
     LOOP: "legendLOOP",
-    NARROW_MISUSE: "legendNARROW_MISUSE"
+    NARROW_MISUSE: "legendNARROW_MISUSE",
+    OVER_LOCK: "legendOVER_LOCK"
   };
   var STATE_KEYS = {
     idle: "stateIdle",
@@ -2322,6 +2375,9 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     if (note.fullLabel) parts.push(t("noteFullLabel", { label: note.fullLabel }));
     if (note.existsIn) parts.push(t("noteExistsIn", { place: note.existsIn }));
     if (note.ownDistanceM !== void 0) parts.push(t("noteOwnDistance", { m: note.ownDistanceM }));
+    if (note.currentLock !== void 0 && note.expectedLock !== void 0) {
+      parts.push(t("noteLock", { current: note.currentLock, expected: note.expectedLock }));
+    }
     return parts.join(", ");
   }
   var SEVERITY_ORDER = {
@@ -2333,9 +2389,11 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     WRONG_CITY: 5,
     NOT_FOUND: 6,
     UNNAMED: 7,
-    MICRO_SEGMENT: 8,
-    LOOP: 9,
-    NARROW_MISUSE: 10
+    UNDER_LOCK: 8,
+    MICRO_SEGMENT: 9,
+    LOOP: 10,
+    NARROW_MISUSE: 11,
+    OVER_LOCK: 12
   };
   function groupIssues(issues) {
     const groups = /* @__PURE__ */ new Map();
@@ -2434,7 +2492,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       brand.append(
         el("span", "chk-brand-icon", "🇨🇭"),
         el("span", "chk-brand-title", "CH Names"),
-        el("span", "chk-brand-version", `v${"1.12.1"}`)
+        el("span", "chk-brand-version", `v${"1.13.0"}`)
       );
       const toolbar = el("div", "chk-toolbar");
       const rescanBtn = el("button", "chk-btn", t("rescan"));
@@ -2906,6 +2964,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
         optionToggle("guidelineChecks", "guidelineChecks", "guidelineChecksTitle"),
         optionToggle("helperSetting", "editPanelHelper"),
         optionToggle("geometryMatching", "geometryMatching", "geometryMatchingTitle"),
+        optionToggle("editableOnly", "editableOnly", "editableOnlyTitle"),
         viewportToggle
       ];
       const scopingRow = el("div", "chk-settings-row");
@@ -3196,7 +3255,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.12.1"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.13.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

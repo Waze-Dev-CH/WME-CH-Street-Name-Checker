@@ -31,9 +31,11 @@ export const LEGEND_KEYS: Record<IssueStatus, StringKey> = {
   WRONG_CITY: "legendWRONG_CITY",
   NOT_FOUND: "legendNOT_FOUND",
   UNNAMED: "legendUNNAMED",
+  UNDER_LOCK: "legendUNDER_LOCK",
   MICRO_SEGMENT: "legendMICRO_SEGMENT",
   LOOP: "legendLOOP",
   NARROW_MISUSE: "legendNARROW_MISUSE",
+  OVER_LOCK: "legendOVER_LOCK",
 };
 
 export const STATE_KEYS: Record<ScanSnapshot["state"], StringKey> = {
@@ -90,6 +92,9 @@ export function formatNote(note: IssueNote | null): string {
   if (note.fullLabel) parts.push(t("noteFullLabel", { label: note.fullLabel }));
   if (note.existsIn) parts.push(t("noteExistsIn", { place: note.existsIn }));
   if (note.ownDistanceM !== undefined) parts.push(t("noteOwnDistance", { m: note.ownDistanceM }));
+  if (note.currentLock !== undefined && note.expectedLock !== undefined) {
+    parts.push(t("noteLock", { current: note.currentLock, expected: note.expectedLock }));
+  }
   return parts.join(", ");
 }
 
@@ -113,9 +118,11 @@ const SEVERITY_ORDER: Record<IssueStatus, number> = {
   WRONG_CITY: 5,
   NOT_FOUND: 6,
   UNNAMED: 7,
-  MICRO_SEGMENT: 8,
-  LOOP: 9,
-  NARROW_MISUSE: 10,
+  UNDER_LOCK: 8,
+  MICRO_SEGMENT: 9,
+  LOOP: 10,
+  NARROW_MISUSE: 11,
+  OVER_LOCK: 12,
 };
 
 export function groupIssues(issues: Iterable<Issue>): IssueGroup[] {
@@ -753,6 +760,7 @@ export class TabUI {
         | "guidelineChecks"
         | "editPanelHelper"
         | "geometryMatching"
+        | "editableOnly"
       >,
       titleKey?: StringKey,
     ): HTMLElement =>
@@ -781,6 +789,7 @@ export class TabUI {
       optionToggle("guidelineChecks", "guidelineChecks", "guidelineChecksTitle"),
       optionToggle("helperSetting", "editPanelHelper"),
       optionToggle("geometryMatching", "geometryMatching", "geometryMatchingTitle"),
+      optionToggle("editableOnly", "editableOnly", "editableOnlyTitle"),
       viewportToggle,
     ];
 

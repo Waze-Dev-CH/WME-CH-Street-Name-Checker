@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.13.0] - 2026-06-14
+
+### Added
+- A new "Only segments I can edit" setting (off by default) hides every segment locked above your editor rank. When it is on, those segments disappear from the list, the map highlights and the counters alike, so you only see issues you can actually fix. If your editor rank cannot be determined (for example before you are logged in), nothing is hidden.
+- Two new issue types flag segments whose lock level does not match the Swiss standard for their road type: "UNDER_LOCK" when a segment is locked below the expected minimum (Freeway L5, Major Highway L4, Minor Highway L3, Primary Street L2, Street L1) and "OVER_LOCK" when it is locked above it. Over-locking is often intentional, so it is reported as a separate, informative status you can hide on its own with the status chips. Ramps and road types without a defined standard are never flagged, and the rule does not apply to foreign segments. Each issue shows the lock delta, e.g. "L3 → expected L1".
+
 ## [1.12.1] - 2026-06-14
 
 ### Fixed

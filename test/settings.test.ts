@@ -25,4 +25,16 @@ describe("migrateSettings", () => {
     expect(migrated.enabledStatuses).toEqual(ALL_STATUSES);
     expect(migrated.minZoom).toBe(16);
   });
+
+  it("defaults editableOnly to false for v2 blobs without the field", () => {
+    expect(DEFAULT_SETTINGS.editableOnly).toBe(false);
+    expect(migrateSettings({ version: 2 }).editableOnly).toBe(false);
+  });
+});
+
+describe("ALL_STATUSES", () => {
+  it("includes the lock-level checks", () => {
+    expect(ALL_STATUSES).toContain("UNDER_LOCK");
+    expect(ALL_STATUSES).toContain("OVER_LOCK");
+  });
 });
