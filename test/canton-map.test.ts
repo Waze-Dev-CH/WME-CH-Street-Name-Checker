@@ -14,6 +14,12 @@ describe("cantonCodeFromName", () => {
     expect(cantonCodeFromName("  vaud ")).toBe("vd");
   });
 
+  it("resolves bilingual canton names split on a slash", () => {
+    expect(cantonCodeFromName("Fribourg / Freiburg")).toBe("fr");
+    expect(cantonCodeFromName("Freiburg / Fribourg")).toBe("fr");
+    expect(cantonCodeFromName("Valais / Wallis")).toBe("vs");
+  });
+
   it("returns null for unknown or empty input", () => {
     expect(cantonCodeFromName("Nowhere")).toBeNull();
     expect(cantonCodeFromName(null)).toBeNull();

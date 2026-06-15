@@ -54,7 +54,14 @@ function normalizeName(name: string): string {
 
 export function cantonCodeFromName(name: string | null | undefined): string | null {
   if (!name) return null;
-  return NAME_TO_CODE.get(normalizeName(name)) ?? null;
+  const direct = NAME_TO_CODE.get(normalizeName(name));
+  if (direct) return direct;
+  // Bilingual cantons (FR, VS, GR…) may arrive as "Fribourg / Freiburg".
+  for (const part of name.split("/")) {
+    const code = NAME_TO_CODE.get(normalizeName(part));
+    if (code) return code;
+  }
+  return null;
 }
 
 /** LV95 envelope/point URL builders per canton, keyed by code. E/N are LV95. */
