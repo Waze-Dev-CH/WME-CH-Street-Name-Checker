@@ -1,19 +1,29 @@
 import type { LineString } from "geojson";
 import { cantonCodeFromName, cantonMapUrlForGeometry } from "../canton-map";
 import { t } from "../i18n";
-import frFlag from "../../assets/canton-flags/fr.svg";
+import beFlag from "../../assets/canton-flags/be.svg";
+import blFlag from "../../assets/canton-flags/bl.svg";
+import geFlag from "../../assets/canton-flags/ge.svg";
+import grFlag from "../../assets/canton-flags/gr.svg";
+import juFlag from "../../assets/canton-flags/ju.svg";
 import neFlag from "../../assets/canton-flags/ne.svg";
 import soFlag from "../../assets/canton-flags/so.svg";
+import szFlag from "../../assets/canton-flags/sz.svg";
+import tiFlag from "../../assets/canton-flags/ti.svg";
 import vdFlag from "../../assets/canton-flags/vd.svg";
-import vsFlag from "../../assets/canton-flags/vs.svg";
 
-/** Bundled canton flags (data URIs). Cantons without one fall back to a code badge. */
+/** Bundled canton flags (data URIs) for the covered cantons. Others fall back to a code badge. */
 const FLAGS: Record<string, string> = {
-  fr: frFlag,
+  be: beFlag,
+  bl: blFlag,
+  ge: geFlag,
+  gr: grFlag,
+  ju: juFlag,
   ne: neFlag,
   so: soFlag,
+  sz: szFlag,
+  ti: tiFlag,
   vd: vdFlag,
-  vs: vsFlag,
 };
 
 /**
