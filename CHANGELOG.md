@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.15.1] - 2026-06-15
+
+### Changed
+- The project moved to the `Waze-Dev-CH` GitHub organisation. The script's update, download, home and support links now point at `github.com/Waze-Dev-CH/WME-CH-Street-Name-Checker`, and auto-updates are served from the new location.
+
 ## [1.15.0] - 2026-06-15
 
 ### Added

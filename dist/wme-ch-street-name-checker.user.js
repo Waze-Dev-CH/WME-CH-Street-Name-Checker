@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
-// @namespace    https://github.com/Neprena
-// @version      1.15.0
+// @namespace    https://github.com/Waze-Dev-CH
+// @version      1.15.1
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
-// @homepageURL  https://github.com/Neprena/WME-CH-Street-Name-Checker
-// @supportURL   https://github.com/Neprena/WME-CH-Street-Name-Checker/issues
-// @downloadURL  https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js
-// @updateURL    https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js
+// @homepageURL  https://github.com/Waze-Dev-CH/WME-CH-Street-Name-Checker
+// @supportURL   https://github.com/Waze-Dev-CH/WME-CH-Street-Name-Checker/issues
+// @downloadURL  https://raw.githubusercontent.com/Waze-Dev-CH/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js
+// @updateURL    https://raw.githubusercontent.com/Waze-Dev-CH/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js
 // @match        https://www.waze.com/editor*
 // @match        https://www.waze.com/*/editor*
 // @match        https://beta.waze.com/editor*
@@ -2565,7 +2565,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       brand.append(
         el("span", "chk-brand-icon", "🇨🇭"),
         el("span", "chk-brand-title", "CH Names"),
-        el("span", "chk-brand-version", `v${"1.15.0"}`)
+        el("span", "chk-brand-version", `v${"1.15.1"}`)
       );
       const toolbar = el("div", "chk-toolbar");
       const rescanBtn = el("button", "chk-btn", t("rescan"));
@@ -2647,7 +2647,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     buildFooter() {
       const footer = el("div", "chk-footer");
       const link = el("a", "", "Changelog");
-      link.href = "https://github.com/Neprena/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
+      link.href = "https://github.com/Waze-Dev-CH/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
       link.target = "_blank";
       link.rel = "noopener";
       footer.appendChild(link);
@@ -3338,7 +3338,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.15.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.15.1"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

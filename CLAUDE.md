@@ -37,11 +37,10 @@ A previous release shipped a broken test because the suite was never run; do not
 - `dist/...user.js` is **committed** and **is** the deployment: the userscript `@updateURL`
   points at `raw.githubusercontent.com/.../main/dist/...`. **Pushing to `main` updates every
   installed user immediately.**
-- Two remotes: `origin` (GitHub) is the **deployment** remote read by `@updateURL`/Greasy Fork;
-  `forgejo` (`git.npna.ch/Neprena/WME-CH-Street-Name-Checker`) is a **public mirror** for
-  redundancy. `/release` pushes both; a failed mirror push is non-blocking (GitHub still ships).
+- One remote: `origin` (GitHub) is the **deployment** remote read by `@updateURL`/Greasy Fork.
+  `/release` pushes it.
 - Always release through the **`/release` skill** (`.claude/skills/release/`). It runs the
-  verification loop, updates `CHANGELOG.md`, bumps + builds, commits, tags `vX.Y.Z`, and pushes.
+  verification loop, updates `CHANGELOG.md`, bumps + builds, commits, tags `vX.Y.Z`, and pushes to GitHub.
 - **Push only via `/release`, and only after explicit user confirmation.** Never run
   `git push` otherwise. Local commits and builds are fine without asking; the push is not.
 - Bump the version only with `npm run release <patch|minor|major>` — it rewrites

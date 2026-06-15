@@ -334,7 +334,7 @@ export class TabUI {
   private buildFooter(): HTMLElement {
     const footer = el("div", "chk-footer");
     const link = el("a", "", "Changelog");
-    link.href = "https://github.com/Neprena/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
+    link.href = "https://github.com/Waze-Dev-CH/WME-CH-Street-Name-Checker/blob/main/CHANGELOG.md";
     link.target = "_blank";
     link.rel = "noopener";
     footer.appendChild(link);

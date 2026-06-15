@@ -1,6 +1,6 @@
 ---
 name: release
-description: Release a new version of the WME CH Street Name Checker userscript — bump the version, update the CHANGELOG, run the verification loop, rebuild dist, commit, tag, and (after explicit confirmation) push to GitHub (deployment) and the Forgejo mirror so GitHub raw and Greasy Fork auto-update. Use when the user wants to ship, publish, release, or cut a new version.
+description: Release a new version of the WME CH Street Name Checker userscript — bump the version, update the CHANGELOG, run the verification loop, rebuild dist, commit, tag, and (after explicit confirmation) push to GitHub so GitHub raw and Greasy Fork auto-update. Use when the user wants to ship, publish, release, or cut a new version.
 ---
 
 # Release the userscript
@@ -11,10 +11,8 @@ Pushing to `main` therefore deploys to every user immediately. Greasy Fork (once
 see `docs/greasy-fork.md`) re-syncs automatically from the same raw URL whenever `@version`
 increases — so no manual Greasy Fork action is needed per release.
 
-**Remotes:** `origin` (GitHub, `Neprena/WME-CH-Street-Name-Checker`) is the **deployment**
+**Remote:** `origin` (GitHub, `Waze-Dev-CH/WME-CH-Street-Name-Checker`) is the **deployment**
 remote — it is what `@updateURL` and Greasy Fork read, so it must always be pushed.
-`forgejo` (`https://git.npna.ch/Neprena/WME-CH-Street-Name-Checker`) is a **public mirror**
-for redundancy; it deploys to no one. Keep them in sync by pushing the release to both.
 
 ## Absolute rule — push
 
@@ -59,20 +57,16 @@ explicit "go" from the user. Everything before the push is local and reversible.
 
 7. **Annotated tag:** `git tag -a vX.Y.Z -m "vX.Y.Z"`.
 
-8. **Confirm, then push (the ONLY pushes in the project).** Show the recap — new version,
-   committed files, tag, `git log -1` — and the exact commands:
+8. **Confirm, then push (the ONLY push in the project).** Show the recap — new version,
+   committed files, tag, `git log -1` — and the exact command:
    ```
-   git push origin main --follow-tags    # GitHub — deployment, must succeed
-   git push forgejo main --follow-tags   # Forgejo mirror — redundancy
+   git push origin main --follow-tags    # GitHub — deployment
    ```
-   Execute them **only** after the user explicitly says go. Push `origin` first: it is the
-   deployment remote. Then push `forgejo`; if the mirror push fails (e.g. credentials), the
-   release still shipped via GitHub — report the mirror failure but do not treat it as
-   blocking. Without confirmation: stop here, everything stays local, and tell the user it
-   is ready to push when they are.
+   Execute it **only** after the user explicitly says go. Without confirmation: stop here,
+   everything stays local, and tell the user it is ready to push when they are.
 
 9. **Post-release.** Print the install/update URL
-   (`https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js`)
+   (`https://raw.githubusercontent.com/Waze-Dev-CH/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js`)
    and remind that installed clients auto-update via `@updateURL` and Greasy Fork re-syncs
    on its own.
 

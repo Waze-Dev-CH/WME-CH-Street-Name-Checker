@@ -2,7 +2,7 @@
 
 The script is distributed today straight from GitHub: the userscript `@updateURL` /
 `@downloadURL` point at
-`https://raw.githubusercontent.com/Neprena/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js`,
+`https://raw.githubusercontent.com/Waze-Dev-CH/WME-CH-Street-Name-Checker/main/dist/wme-ch-street-name-checker.user.js`,
 and installed clients auto-update from there.
 
 [Greasy Fork](https://greasyfork.org) is the standard userscript marketplace. Listing the
