@@ -24,6 +24,7 @@ function issue(overrides: Partial<Issue> = {}): Issue {
     note: null,
     cityId: 10,
     cityName: "Lausanne",
+    cantonName: "Vaud",
     roadType: 1,
     length: 100,
     geometry: GEOMETRY,

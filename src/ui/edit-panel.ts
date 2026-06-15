@@ -15,6 +15,7 @@ import type { Issue } from "../matching/evaluate";
 import type { Scanner } from "../scan";
 import type { SettingsStore } from "../settings";
 import { formatNote, LEGEND_KEYS, STATE_KEYS } from "./tab";
+import { cantonMapLink } from "./canton-link";
 import { mapGeoAdminUrlForGeometry } from "../geoadmin/links";
 import { getLocale, t } from "../i18n";
 
@@ -139,6 +140,8 @@ export class EditPanelBox {
     geoLink.rel = "noopener";
     geoLink.title = t("geoAdminLinkTitle");
     head.appendChild(geoLink);
+    const cantonLink = cantonMapLink(issue.geometry, issue.cantonName);
+    if (cantonLink) head.appendChild(cantonLink);
 
     const detail = document.createElement("div");
     detail.className = "chk-muted";

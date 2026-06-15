@@ -100,6 +100,11 @@ ${statusChipRules}
 .chk-arrow { color: var(--chk-muted); }
 .chk-suggestion { font-weight: bold; color: var(--chk-primary); }
 .chk-note { color: var(--chk-muted); font-style: italic; }
+.chk-canton-link { display: inline-flex; align-items: center; text-decoration: none; }
+.chk-canton-flag { height: 11px; width: auto; vertical-align: middle;
+  border: 1px solid rgba(0,0,0,0.2); border-radius: 1px; }
+.chk-canton-badge { font-size: 10px; font-weight: 700; color: var(--chk-primary);
+  border: 1px solid var(--chk-border); border-radius: 3px; padding: 0 3px; line-height: 1.4; }
 .chk-count { color: var(--chk-muted); background: var(--chk-bg); border: 1px solid var(--chk-border); border-radius: 9px; padding: 0 6px; font-size: 10px; }
 .chk-fix-all { font-size: 11px; padding: 3px 9px; border: none; border-radius: 6px; background: var(--chk-primary); color: var(--chk-primary-contrast); white-space: nowrap; flex-shrink: 0; }
 .chk-fix-all:hover { filter: brightness(1.08); }

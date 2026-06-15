@@ -57,6 +57,8 @@ export interface Issue {
   note: IssueNote | null;
   cityId: number | null;
   cityName: string | null;
+  /** Canton (state) name from WME, used to deep-link to the cantonal map. */
+  cantonName: string | null;
   roadType: number;
   length: number;
   geometry: LineString;
@@ -106,6 +108,7 @@ export function evaluateSegment(
     currentName,
     cityId: address.city?.id ?? null,
     cityName: address.city?.name ?? null,
+    cantonName: address.state?.name ?? null,
     roadType: segment.roadType,
     length: segment.length,
     geometry: segment.geometry,

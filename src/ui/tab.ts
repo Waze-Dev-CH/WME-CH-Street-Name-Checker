@@ -17,6 +17,7 @@ import { ALL_STATUSES, ROAD_TYPE_OPTIONS, type CityScoping, type Settings, type 
 import { mapGeoAdminUrlForGeometry } from "../geoadmin/links";
 import type { Bbox } from "../geoadmin/types";
 import { getLocale } from "../i18n";
+import { cantonMapLink } from "./canton-link";
 import { injectStyles } from "./styles";
 
 // Road type names stay in English on purpose: they are the WME community's
@@ -558,6 +559,12 @@ export class TabUI {
     geoLink.title = t("geoAdminLinkTitle");
     geoLink.addEventListener("click", (ev) => ev.stopPropagation());
     row.appendChild(geoLink);
+    const cantonLink = cantonMapLink(issue.geometry, issue.cantonName);
+    if (cantonLink) {
+      cantonLink.classList.add("chk-locate");
+      cantonLink.addEventListener("click", (ev) => ev.stopPropagation());
+      row.appendChild(cantonLink);
+    }
     const locateBtn = el("button", "chk-locate", "⌖");
     locateBtn.title = t("locateTitle");
     locateBtn.addEventListener("click", (ev) => {

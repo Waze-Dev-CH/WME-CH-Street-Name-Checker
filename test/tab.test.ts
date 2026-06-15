@@ -23,6 +23,7 @@ function issue(status: IssueStatus, currentName: string): Issue {
     note: null,
     cityId: 1,
     cityName: "Lausanne",
+    cantonName: "Vaud",
     roadType: 1,
     length: 100,
     geometry: GEOMETRY,

@@ -55,6 +55,7 @@ function makeIssue(
     note: null,
     cityId: address?.city?.id ?? null,
     cityName: address?.city?.name ?? null,
+    cantonName: address?.state?.name ?? null,
     roadType: segment.roadType,
     length: segment.length,
     geometry: segment.geometry,

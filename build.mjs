@@ -28,6 +28,7 @@ const options = {
   banner: { js: header },
   charset: "utf8",
   define: { __SCRIPT_VERSION__: JSON.stringify(pkg.version) },
+  loader: { ".svg": "dataurl" },
   logLevel: "info",
 };
 

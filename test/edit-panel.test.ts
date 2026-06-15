@@ -22,6 +22,7 @@ function issue(overrides: Partial<Issue> = {}): Issue {
     note: null,
     cityId: 1,
     cityName: "Avenches",
+    cantonName: "Vaud",
     roadType: 1,
     length: 100,
     geometry: GEOMETRY,
