@@ -64,22 +64,27 @@ export function cantonCodeFromName(name: string | null | undefined): string | nu
   return null;
 }
 
-/** LV95 envelope/point URL builders per canton, keyed by code. E/N are LV95. */
+/**
+ * LV95 point URL builders per canton, keyed by code. E/N are LV95. Each entry is
+ * verified live (permalink.js source, or the documented GeoMapFish scheme proven
+ * by NE). Cantons whose recenter scheme could not be confirmed are intentionally
+ * absent (no button) — they stay recognised in NAME_TO_CODE so they can be added
+ * once verified. See the cantonal-geoportal notes in the plan.
+ */
 const MAP_URL: Record<string, (e: number, n: number) => string> = {
-  // VD: custom ArcGIS viewer (center,scale) on www.geo.vd.ch — the non-www host
+  // VD — custom ArcGIS; permalink.js builds center,scale,wkid. The non-www host
   // 302-redirects and drops the query, so target www directly.
-  vd: (e, n) => centerScale("https://www.geo.vd.ch/", e, n),
-  // GeoMapFish: map_x/map_y/map_zoom (+ crosshair).
-  sz: (e, n) => geomapfish("https://map.geo.sz.ch/", e, n),
-  ti: (e, n) => geomapfish("https://map.geo.ti.ch/", e, n),
+  vd: (e, n) => `https://www.geo.vd.ch/?center=${r(e)},${r(n)}&scale=10000&wkid=2056`,
+  // GeoMapFish (map_x/map_y/map_zoom + crosshair) — NE confirmed working live.
   ne: (e, n) => geomapfish("https://sitn.ne.ch/", e, n),
   ju: (e, n) => geomapfish("https://geo.jura.ch/", e, n),
-  // VS (geo.vs.ch) is ArcGIS and SH uses a custom viewer — their recenter URL
-  // scheme is unconfirmed, so no button until verified (they stay in NAME_TO_CODE).
-  // center=E,N&scale.
-  fr: (e, n) => centerScale("https://map.geo.fr.ch/", e, n),
-  ge: (e, n) => centerScale("https://map.sitg.ge.ch/", e, n),
-  // Canton-specific variants.
+  sz: (e, n) => geomapfish("https://map.geo.sz.ch/", e, n),
+  ti: (e, n) => geomapfish("https://map.geo.ti.ch/", e, n),
+  gr: (e, n) => geomapfish("https://map.geo.gr.ch/", e, n),
+  bl: (e, n) => geomapfish("https://geoview.bl.ch/", e, n),
+  // GE — Topomat/ESRI viewer (center,scale found in JS).
+  ge: (e, n) => centerScale("https://map.sitg.ge.ch/app/", e, n),
+  // Canton-specific schemes.
   be: (e, n) =>
     `https://www.topo.apps.be.ch/pub/map/?center=${r(e)},${r(n)}&scale=10000&addcrosshair=true`,
   so: (e, n) => `https://geo.so.ch/map?c=${r(e)},${r(n)}&s=10000&hc=1`,

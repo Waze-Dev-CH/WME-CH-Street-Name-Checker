@@ -28,21 +28,26 @@ describe("cantonCodeFromName", () => {
 });
 
 describe("cantonMapUrl", () => {
-  it("builds a GeoMapFish URL (map_x/map_y) for Neuchâtel in LV95", () => {
-    const url = cantonMapUrl("Neuchâtel", 6.75, 47.0);
-    expect(url).toContain("sitn.ne.ch");
-    expect(url).toMatch(/map_x=2\d{6}/); // LV95 easting ~2.5M
-    expect(url).toMatch(/map_y=1\d{6}/);
+  it("builds GeoMapFish URLs (map_x/map_y) for NE, JU, GR, BL in LV95", () => {
+    for (const [name, host] of [
+      ["Neuchâtel", "sitn.ne.ch"],
+      ["Jura", "geo.jura.ch"],
+      ["Graubünden", "map.geo.gr.ch"],
+      ["Basel-Landschaft", "geoview.bl.ch"],
+    ] as const) {
+      const url = cantonMapUrl(name, 6.75, 47.0)!;
+      expect(url).toContain(host);
+      expect(url).toMatch(/map_x=2\d{6}/); // LV95 easting ~2.5M
+      expect(url).toMatch(/map_y=1\d{6}/);
+    }
   });
 
-  it("builds a center+scale URL for Geneva, Fribourg and Vaud", () => {
-    expect(cantonMapUrl("Genève", 6.14, 46.2)).toContain("map.sitg.ge.ch");
+  it("builds center+scale URLs for Geneva and Vaud", () => {
+    expect(cantonMapUrl("Genève", 6.14, 46.2)).toContain("map.sitg.ge.ch/app/");
     expect(cantonMapUrl("Genève", 6.14, 46.2)).toContain("center=");
-    expect(cantonMapUrl("Fribourg", 7.16, 46.8)).toContain("map.geo.fr.ch");
-    // VD is a custom ArcGIS viewer on www.geo.vd.ch (center,scale), not GeoMapFish;
-    // the non-www host 302-redirects and drops the query.
+    // VD: custom ArcGIS on www.geo.vd.ch (center,scale,wkid); non-www drops the query.
     expect(cantonMapUrl("Vaud", 6.63, 46.52)).toContain("www.geo.vd.ch");
-    expect(cantonMapUrl("Vaud", 6.63, 46.52)).toContain("center=");
+    expect(cantonMapUrl("Vaud", 6.63, 46.52)).toContain("wkid=2056");
   });
 
   it("builds the Bern and Solothurn specific URLs", () => {
@@ -55,9 +60,11 @@ describe("cantonMapUrl", () => {
   it("returns null for a canton with no configured map URL", () => {
     expect(cantonMapUrl("Zürich", 8.54, 47.37)).toBeNull();
     expect(cantonMapUrl("Nowhere", 8, 47)).toBeNull();
-    // VS/SH recognised as cantons but their map URL scheme is not yet confirmed.
+    // Recognised cantons whose recenter URL is not yet confirmed → no button.
     expect(cantonMapUrl("Valais", 7.36, 46.23)).toBeNull();
     expect(cantonMapUrl("Schaffhausen", 8.63, 47.7)).toBeNull();
+    expect(cantonMapUrl("Fribourg", 7.16, 46.8)).toBeNull();
+    expect(cantonMapUrl("Fribourg / Freiburg", 7.16, 46.8)).toBeNull();
   });
 });
 
