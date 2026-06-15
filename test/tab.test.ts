@@ -31,7 +31,7 @@ function issue(status: IssueStatus, currentName: string): Issue {
 }
 
 describe("formatNote", () => {
-  it("renders the lock delta", () => {
+  it("renders the lock delta (note holds 1-6 levels directly)", () => {
     setLocale("en");
     expect(formatNote({ currentLock: 3, expectedLock: 1 })).toBe("L3 → expected L1");
     setLocale("fr");

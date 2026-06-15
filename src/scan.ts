@@ -344,7 +344,13 @@ export class Scanner {
     }
     if (!(await this.reclassifyContinuations(issues, stats, gen))) return false;
     if (gen !== this.evalGeneration) return false;
-    if (settings.guidelineChecks) {
+    // Lock checks are independent of the structural-guideline toggle: they run
+    // whenever a lock status is enabled, so disabling micro/loop/narrow noise does
+    // not silently kill lock detection.
+    const lockEnabled =
+      settings.enabledStatuses.includes("UNDER_LOCK") ||
+      settings.enabledStatuses.includes("OVER_LOCK");
+    if (settings.guidelineChecks || lockEnabled) {
       // Name issues keep precedence; guideline issues fill the remaining segments.
       const getAddress = (segmentId: number) => {
         try {
@@ -353,7 +359,10 @@ export class Scanner {
           return null;
         }
       };
-      for (const issue of evaluateGuidelines(segments, getAddress, swissCountryId)) {
+      const guidelineIssues = evaluateGuidelines(segments, getAddress, swissCountryId, {
+        structural: settings.guidelineChecks,
+      });
+      for (const issue of guidelineIssues) {
         if (!issues.has(issue.segmentId) && settings.enabledStatuses.includes(issue.status)) {
           issues.set(issue.segmentId, issue);
         }

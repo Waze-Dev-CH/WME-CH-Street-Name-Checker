@@ -6,6 +6,7 @@ import {
   formatFixError,
   GROUP_FIX_CAP,
   GROUP_FIX_CONFIRM_THRESHOLD,
+  LOCK_STATUSES,
   withFixLock,
 } from "../fix";
 import { LANGUAGE_CHOICES, resolveLocale, setLocale, t, type LanguagePreference, type StringKey } from "../i18n";
@@ -94,6 +95,7 @@ export function formatNote(note: IssueNote | null): string {
   if (note.existsIn) parts.push(t("noteExistsIn", { place: note.existsIn }));
   if (note.ownDistanceM !== undefined) parts.push(t("noteOwnDistance", { m: note.ownDistanceM }));
   if (note.currentLock !== undefined && note.expectedLock !== undefined) {
+    // currentLock / expectedLock are already 1-6 levels (see guidelines.ts).
     parts.push(t("noteLock", { current: note.currentLock, expected: note.expectedLock }));
   }
   return parts.join(", ");
@@ -565,7 +567,9 @@ export class TabUI {
     row.appendChild(locateBtn);
     if (issue.fixable) {
       const fixBtn = el("button", "chk-fix-all", t("fix"));
-      fixBtn.title = t("fixTitle", { name: issue.suggestion ?? "" });
+      fixBtn.title = LOCK_STATUSES.has(issue.status)
+        ? t("fixLockTitle", { n: issue.note?.expectedLock ?? "" })
+        : t("fixTitle", { name: issue.suggestion ?? "" });
       fixBtn.addEventListener("click", (ev) => {
         ev.stopPropagation();
         this.onFixOne(issue, fixBtn);
@@ -656,6 +660,13 @@ export class TabUI {
   }
 
   private onFixOne(issue: Issue, button?: HTMLButtonElement): void {
+    // Lowering an over-lock is often unwanted; confirm before applying.
+    if (
+      issue.status === "OVER_LOCK" &&
+      !confirm(t("confirmOverLockFix", { n: issue.note?.expectedLock ?? "" }))
+    ) {
+      return;
+    }
     void withFixLock(async () => {
       if (button) {
         button.disabled = true;
@@ -674,7 +685,9 @@ export class TabUI {
 
   private onFixGroup(group: IssueGroup, button?: HTMLButtonElement): void {
     const n = Math.min(group.issues.length, GROUP_FIX_CAP);
-    if (
+    if (group.status === "OVER_LOCK") {
+      if (!confirm(t("confirmOverLockFix", { n: group.note?.expectedLock ?? "" }))) return;
+    } else if (
       n > GROUP_FIX_CONFIRM_THRESHOLD &&
       !confirm(t("confirmGroupFix", { name: group.suggestion ?? "", n }))
     ) {

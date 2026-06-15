@@ -3,6 +3,18 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.15.0] - 2026-06-15
+
+### Added
+- Lock-level issues can now be fixed in one click. "UNDER_LOCK" and "OVER_LOCK" segments get a Fix button that sets the segment's lock to the Swiss standard for its road type. Lowering an over-locked segment asks for confirmation first, since over-locking is often intentional, and the script never tries to set a lock above your own editor level — it tells you when the target is out of reach. As with every other fix, nothing is saved automatically; review and save in WME.
+
+### Changed
+- The lock checks now run independently of the "Swiss guideline checks" toggle. Turning off the structural checks (micro-segments, loops, narrow streets) no longer silently disables lock detection: "UNDER_LOCK" and "OVER_LOCK" are governed only by their own status chips.
+- The "UNDER_LOCK" and "OVER_LOCK" categories now start enabled only for editors at level 3 and above, where lock management is common; lower-level editors can still switch them on with the status chips.
+
+### Fixed
+- Lock levels are now read and shown consistently as WME levels (1-6, e.g. "L1 → expected L2"), matching what you see in the editor. The previous check compared the editor's internal 0-based value against the 1-6 standard, so the reported current lock — and the under/over verdict — could be off by one level.
+
 ## [1.14.0] - 2026-06-14
 
 ### Added

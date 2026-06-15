@@ -18,12 +18,14 @@ const NARROW_STREET_TYPE = 22;
 const DRIVABLE_TYPES = new Set([1, 2, 3, 4, 6, 7, 8, 17, 20, 22]);
 
 /**
- * Minimum lock rank expected per road type (Swiss WME standard).
- * DRAFT to validate against the Swiss wiki/forum before release. Road types not
- * listed are not checked. Ramps (4) are excluded on purpose: their lock follows
- * the highest connected segment, not a flat per-type table.
+ * Expected lock LEVEL (1-6, exactly as shown in WME) per road type, Swiss standard.
+ * The SDK exposes a 0-based `lockRank`, so we compare against `lockRank + 1`. Keeping
+ * the whole model in 1-6 levels (not raw lockRank) so every number the user sees lines
+ * up. DRAFT to validate against the Swiss wiki/forum. Road types not listed are not
+ * checked. Ramps (4) excluded on purpose: their lock follows the highest connected
+ * segment, not a flat per-type table.
  */
-const EXPECTED_LOCK_BY_ROAD_TYPE = new Map<number, number>([
+const EXPECTED_LEVEL_BY_ROAD_TYPE = new Map<number, number>([
   [3, 5], // Freeway
   [6, 4], // Major Highway
   [7, 3], // Minor Highway
@@ -68,7 +70,12 @@ export function evaluateGuidelines(
   segments: Segment[],
   getAddress: GetAddressFn,
   swissCountryId: number | null = null,
+  options: { structural?: boolean } = {},
 ): Issue[] {
+  // `structural` gates the geometry checks (micro/loop/narrow) behind the
+  // "Swiss guideline checks" toggle. Lock checks run regardless, governed only by
+  // their own status filter, so they survive when that toggle is off.
+  const { structural = true } = options;
   const issues = new Map<number, Issue>();
   const byNodePair = new Map<string, Segment[]>();
 
@@ -76,12 +83,13 @@ export function evaluateGuidelines(
     if (!DRIVABLE_TYPES.has(segment.roadType)) continue;
     const isRoundabout = segment.junctionId !== null;
 
-    if (!isRoundabout && segment.length < MIN_SEGMENT_LENGTH_M) {
+    if (structural && !isRoundabout && segment.length < MIN_SEGMENT_LENGTH_M) {
       const issue = makeIssue(segment, "MICRO_SEGMENT", getAddress, swissCountryId);
       if (issue) issues.set(segment.id, issue);
     }
 
     if (
+      structural &&
       segment.roadType === NARROW_STREET_TYPE &&
       (isOneWay(segment) || segment.length < MIN_NARROW_STREET_LENGTH_M)
     ) {
@@ -91,23 +99,28 @@ export function evaluateGuidelines(
       }
     }
 
-    // Lock rank below / above the Swiss minimum expected for the road type.
-    // Over-locking is often intentional, hence a separate, informative status.
-    const expectedLock = EXPECTED_LOCK_BY_ROAD_TYPE.get(segment.roadType);
+    // Lock level below / above the Swiss standard for the road type. Over-locking
+    // is often intentional, hence a separate, informative status. All in 1-6 levels:
+    // segment.lockRank is 0-based, so the segment's level is lockRank + 1.
+    const expectedLevel = EXPECTED_LEVEL_BY_ROAD_TYPE.get(segment.roadType);
     if (
-      expectedLock !== undefined &&
+      expectedLevel !== undefined &&
       typeof segment.lockRank === "number" &&
-      segment.lockRank !== expectedLock &&
+      segment.lockRank + 1 !== expectedLevel &&
       !issues.has(segment.id)
     ) {
-      const status = segment.lockRank < expectedLock ? "UNDER_LOCK" : "OVER_LOCK";
+      const currentLevel = segment.lockRank + 1;
+      const status = currentLevel < expectedLevel ? "UNDER_LOCK" : "OVER_LOCK";
       const issue = makeIssue(segment, status, getAddress, swissCountryId);
       if (issue) {
-        issue.note = { ...(issue.note ?? {}), currentLock: segment.lockRank, expectedLock };
+        // Levels (not raw lockRank) are carried in the note; the fix converts back.
+        issue.note = { ...(issue.note ?? {}), currentLock: currentLevel, expectedLock: expectedLevel };
+        issue.fixable = true;
         issues.set(segment.id, issue);
       }
     }
 
+    if (!structural) continue;
     if (isRoundabout || segment.fromNodeId === null || segment.toNodeId === null) continue;
 
     // One-segment loop: both endpoints on the same node.

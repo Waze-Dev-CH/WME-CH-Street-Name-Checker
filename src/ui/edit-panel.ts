@@ -6,6 +6,7 @@ import {
   GROUP_FIX_CAP,
   GROUP_FIX_CONFIRM_THRESHOLD,
   isFixInFlight,
+  LOCK_STATUSES,
   withFixLock,
 } from "../fix";
 import { log } from "../log";
@@ -165,7 +166,9 @@ export class EditPanelBox {
       buttons.className = "chk-helper-sug";
       const fixBtn = document.createElement("button");
       fixBtn.textContent = t("fix");
-      fixBtn.title = t("fixTitle", { name: issue.suggestion ?? "" });
+      fixBtn.title = LOCK_STATUSES.has(issue.status)
+        ? t("fixLockTitle", { n: issue.note?.expectedLock ?? "" })
+        : t("fixTitle", { name: issue.suggestion ?? "" });
       fixBtn.addEventListener("click", () => this.onFixOne(issue, fixBtn));
       buttons.appendChild(fixBtn);
 
@@ -194,6 +197,13 @@ export class EditPanelBox {
   }
 
   private onFixOne(issue: Issue, button?: HTMLButtonElement): void {
+    // Lowering an over-lock is often unwanted; confirm before applying.
+    if (
+      issue.status === "OVER_LOCK" &&
+      !confirm(t("confirmOverLockFix", { n: issue.note?.expectedLock ?? "" }))
+    ) {
+      return;
+    }
     void withFixLock(async () => {
       if (button) {
         button.disabled = true;
@@ -214,7 +224,9 @@ export class EditPanelBox {
 
   private onFixGroup(issue: Issue, group: Issue[], button?: HTMLButtonElement): void {
     const n = Math.min(group.length, GROUP_FIX_CAP);
-    if (
+    if (issue.status === "OVER_LOCK") {
+      if (!confirm(t("confirmOverLockFix", { n: issue.note?.expectedLock ?? "" }))) return;
+    } else if (
       n > GROUP_FIX_CONFIRM_THRESHOLD &&
       !confirm(t("confirmGroupFix", { name: issue.suggestion ?? "", n }))
     ) {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Neprena
-// @version      1.14.0
+// @version      1.15.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -391,6 +391,8 @@
     fixAll: "Fix all ({n})",
     fix: "Fix",
     fixTitle: 'Apply "{name}"',
+    fixLockTitle: "Set lock to L{n}",
+    confirmOverLockFix: "This segment is locked above the Swiss minimum (often intentional). Lower the lock to L{n}?",
     confirmGroupFix: 'Apply "{name}" to {n} segments?\nNothing is saved automatically; review and save in WME.',
     fixFailed: "Fix failed: {error}",
     fixStopped: "Fixed {done}/{total}, then stopped: {error} (segment {id})",
@@ -444,7 +446,8 @@
     errEditingNotAllowed: "Editing is not allowed here",
     errSegmentUnloaded: "Segment no longer loaded",
     errNoCity: "Segment has no city; set the city first",
-    errStreetCreate: "Could not find or create the street record"
+    errStreetCreate: "Could not find or create the street record",
+    errLockAboveRank: "Lock L{expected} is above your editor level (L{user})"
   };
   var fr = {
     stateIdle: "En attente",
@@ -480,6 +483,8 @@
     fixAll: "Tout corriger ({n})",
     fix: "Corriger",
     fixTitle: "Appliquer «{name}»",
+    fixLockTitle: "Régler le verrou sur L{n}",
+    confirmOverLockFix: "Ce segment est verrouillé au-dessus du minimum suisse (souvent volontaire). Abaisser le verrou à L{n} ?",
     confirmGroupFix: "Appliquer «{name}» à {n} segments ?\nRien n'est sauvegardé automatiquement; relisez et sauvez dans WME.",
     fixFailed: "Échec de la correction: {error}",
     fixStopped: "{done}/{total} corrigés, puis arrêt: {error} (segment {id})",
@@ -533,7 +538,8 @@
     errEditingNotAllowed: "Édition non autorisée ici",
     errSegmentUnloaded: "Segment plus chargé",
     errNoCity: "Segment sans ville; définissez d'abord la ville",
-    errStreetCreate: "Impossible de trouver ou de créer la rue"
+    errStreetCreate: "Impossible de trouver ou de créer la rue",
+    errLockAboveRank: "Verrou L{expected} au-dessus de ton niveau d'éditeur (L{user})"
   };
   var de = {
     stateIdle: "Bereit",
@@ -569,6 +575,8 @@
     fixAll: "Alle korrigieren ({n})",
     fix: "Korrigieren",
     fixTitle: "«{name}» übernehmen",
+    fixLockTitle: "Sperrstufe auf L{n} setzen",
+    confirmOverLockFix: "Dieses Segment ist über dem Schweizer Minimum gesperrt (oft beabsichtigt). Sperrstufe auf L{n} senken?",
     confirmGroupFix: "«{name}» auf {n} Segmente anwenden?\nNichts wird automatisch gespeichert; in WME prüfen und speichern.",
     fixFailed: "Korrektur fehlgeschlagen: {error}",
     fixStopped: "{done}/{total} korrigiert, dann gestoppt: {error} (Segment {id})",
@@ -622,7 +630,8 @@
     errEditingNotAllowed: "Bearbeiten ist hier nicht erlaubt",
     errSegmentUnloaded: "Segment nicht mehr geladen",
     errNoCity: "Segment ohne Stadt; zuerst die Stadt setzen",
-    errStreetCreate: "Strasse konnte nicht gefunden oder erstellt werden"
+    errStreetCreate: "Strasse konnte nicht gefunden oder erstellt werden",
+    errLockAboveRank: "Sperrstufe L{expected} über deiner Editor-Stufe (L{user})"
   };
   var it = {
     stateIdle: "In attesa",
@@ -658,6 +667,8 @@
     fixAll: "Correggi tutti ({n})",
     fix: "Correggi",
     fixTitle: "Applica «{name}»",
+    fixLockTitle: "Imposta blocco a L{n}",
+    confirmOverLockFix: "Questo segmento è bloccato oltre il minimo svizzero (spesso intenzionale). Abbassare il blocco a L{n}?",
     confirmGroupFix: "Applicare «{name}» a {n} segmenti?\nNulla viene salvato automaticamente; rivedi e salva in WME.",
     fixFailed: "Correzione fallita: {error}",
     fixStopped: "{done}/{total} corretti, poi interrotto: {error} (segmento {id})",
@@ -711,7 +722,8 @@
     errEditingNotAllowed: "La modifica non è consentita qui",
     errSegmentUnloaded: "Segmento non più caricato",
     errNoCity: "Segmento senza città; imposta prima la città",
-    errStreetCreate: "Impossibile trovare o creare la strada"
+    errStreetCreate: "Impossibile trovare o creare la strada",
+    errLockAboveRank: "Blocco L{expected} oltre il tuo livello editor (L{user})"
   };
   var LOCALES = { en, fr, de, it };
   var LANGUAGE_CHOICES = [
@@ -831,6 +843,7 @@
   // src/fix.ts
   var GROUP_FIX_CAP = 50;
   var GROUP_FIX_CONFIRM_THRESHOLD = 20;
+  var LOCK_STATUSES = /* @__PURE__ */ new Set(["UNDER_LOCK", "OVER_LOCK"]);
   function formatFixError(outcome) {
     if (outcome.errorCode) return t(outcome.errorCode);
     return outcome.errorDetail ?? "?";
@@ -838,6 +851,7 @@
   function fixSegment(sdk2, issue, settings) {
     const segmentId = issue.segmentId;
     const fail = (errorCode) => ({ segmentId, ok: false, errorCode });
+    if (LOCK_STATUSES.has(issue.status)) return fixLock(sdk2, issue);
     if (!issue.fixable || !issue.suggestion) return fail("errNotFixable");
     if (!sdk2.Editing.isEditingAllowed()) return fail("errEditingNotAllowed");
     try {
@@ -876,6 +890,36 @@
       };
     }
   }
+  function fixLock(sdk2, issue) {
+    const segmentId = issue.segmentId;
+    const fail = (errorCode) => ({ segmentId, ok: false, errorCode });
+    const expectedLevel = issue.note?.expectedLock;
+    if (expectedLevel == null) return fail("errNotFixable");
+    if (!sdk2.Editing.isEditingAllowed()) return fail("errEditingNotAllowed");
+    const userRank = sdk2.State.getUserInfo()?.rank;
+    if (typeof userRank === "number" && expectedLevel > userRank + 1) {
+      return {
+        segmentId,
+        ok: false,
+        errorDetail: t("errLockAboveRank", { expected: expectedLevel, user: userRank + 1 })
+      };
+    }
+    try {
+      const segment = sdk2.DataModel.Segments.getById({ segmentId });
+      if (!segment) return fail("errSegmentUnloaded");
+      const targetRank = expectedLevel - 1;
+      if (segment.lockRank === targetRank) return { segmentId, ok: true };
+      sdk2.DataModel.Segments.updateSegment({ segmentId, lockRank: targetRank });
+      return { segmentId, ok: true };
+    } catch (err) {
+      log.error(`Lock fix failed for segment ${segmentId}`, err);
+      return {
+        segmentId,
+        ok: false,
+        errorDetail: err instanceof Error ? err.message : String(err)
+      };
+    }
+  }
   async function fixGroup(sdk2, issues, settings, onProgress) {
     const outcomes = [];
     const batch = issues.slice(0, GROUP_FIX_CAP);
@@ -907,7 +951,7 @@
   var MIN_NARROW_STREET_LENGTH_M = 50;
   var NARROW_STREET_TYPE = 22;
   var DRIVABLE_TYPES = /* @__PURE__ */ new Set([1, 2, 3, 4, 6, 7, 8, 17, 20, 22]);
-  var EXPECTED_LOCK_BY_ROAD_TYPE = /* @__PURE__ */ new Map([
+  var EXPECTED_LEVEL_BY_ROAD_TYPE = /* @__PURE__ */ new Map([
     [3, 5],
     // Freeway
     [6, 4],
@@ -941,31 +985,35 @@
   function isOneWay(segment) {
     return segment.isAtoB !== segment.isBtoA;
   }
-  function evaluateGuidelines(segments, getAddress, swissCountryId = null) {
+  function evaluateGuidelines(segments, getAddress, swissCountryId = null, options = {}) {
+    const { structural = true } = options;
     const issues = /* @__PURE__ */ new Map();
     const byNodePair = /* @__PURE__ */ new Map();
     for (const segment of segments) {
       if (!DRIVABLE_TYPES.has(segment.roadType)) continue;
       const isRoundabout = segment.junctionId !== null;
-      if (!isRoundabout && segment.length < MIN_SEGMENT_LENGTH_M) {
+      if (structural && !isRoundabout && segment.length < MIN_SEGMENT_LENGTH_M) {
         const issue = makeIssue(segment, "MICRO_SEGMENT", getAddress, swissCountryId);
         if (issue) issues.set(segment.id, issue);
       }
-      if (segment.roadType === NARROW_STREET_TYPE && (isOneWay(segment) || segment.length < MIN_NARROW_STREET_LENGTH_M)) {
+      if (structural && segment.roadType === NARROW_STREET_TYPE && (isOneWay(segment) || segment.length < MIN_NARROW_STREET_LENGTH_M)) {
         if (!issues.has(segment.id)) {
           const issue = makeIssue(segment, "NARROW_MISUSE", getAddress, swissCountryId);
           if (issue) issues.set(segment.id, issue);
         }
       }
-      const expectedLock = EXPECTED_LOCK_BY_ROAD_TYPE.get(segment.roadType);
-      if (expectedLock !== void 0 && typeof segment.lockRank === "number" && segment.lockRank !== expectedLock && !issues.has(segment.id)) {
-        const status = segment.lockRank < expectedLock ? "UNDER_LOCK" : "OVER_LOCK";
+      const expectedLevel = EXPECTED_LEVEL_BY_ROAD_TYPE.get(segment.roadType);
+      if (expectedLevel !== void 0 && typeof segment.lockRank === "number" && segment.lockRank + 1 !== expectedLevel && !issues.has(segment.id)) {
+        const currentLevel = segment.lockRank + 1;
+        const status = currentLevel < expectedLevel ? "UNDER_LOCK" : "OVER_LOCK";
         const issue = makeIssue(segment, status, getAddress, swissCountryId);
         if (issue) {
-          issue.note = { ...issue.note ?? {}, currentLock: segment.lockRank, expectedLock };
+          issue.note = { ...issue.note ?? {}, currentLock: currentLevel, expectedLock: expectedLevel };
+          issue.fixable = true;
           issues.set(segment.id, issue);
         }
       }
+      if (!structural) continue;
       if (isRoundabout || segment.fromNodeId === null || segment.toNodeId === null) continue;
       if (segment.fromNodeId === segment.toNodeId) {
         const issue = makeIssue(segment, "LOOP", getAddress, swissCountryId);
@@ -1938,7 +1986,8 @@
       }
       if (!await this.reclassifyContinuations(issues, stats, gen)) return false;
       if (gen !== this.evalGeneration) return false;
-      if (settings.guidelineChecks) {
+      const lockEnabled = settings.enabledStatuses.includes("UNDER_LOCK") || settings.enabledStatuses.includes("OVER_LOCK");
+      if (settings.guidelineChecks || lockEnabled) {
         const getAddress = (segmentId) => {
           try {
             return this.sdk.DataModel.Segments.getAddress({ segmentId });
@@ -1946,7 +1995,10 @@
             return null;
           }
         };
-        for (const issue of evaluateGuidelines(segments, getAddress, swissCountryId)) {
+        const guidelineIssues = evaluateGuidelines(segments, getAddress, swissCountryId, {
+          structural: settings.guidelineChecks
+        });
+        for (const issue of guidelineIssues) {
           if (!issues.has(issue.segmentId) && settings.enabledStatuses.includes(issue.status)) {
             issues.set(issue.segmentId, issue);
           }
@@ -2034,6 +2086,9 @@
       if (selection?.objectType !== "segment" || selection.ids.length !== 1) return;
       const issue = scanner.getSnapshot().issues.get(selection.ids[0]);
       if (!issue?.fixable) return;
+      if (issue.status === "OVER_LOCK" && !confirm(t("confirmOverLockFix", { n: issue.note?.expectedLock ?? "" }))) {
+        return;
+      }
       void withFixLock(async () => fixSegment(sdk2, issue, settings.get())).then((result) => {
         if (result !== null) scanner.reevaluate();
       });
@@ -2094,6 +2149,14 @@
     "OVER_LOCK",
     "UNNAMED_NO_MATCH"
   ];
+  var LOCK_STATUSES2 = ["UNDER_LOCK", "OVER_LOCK"];
+  var LOCK_DEFAULT_MIN_RANK = 2;
+  function defaultEnabledStatuses(userRank) {
+    const lockOk = userRank !== null && userRank >= LOCK_DEFAULT_MIN_RANK;
+    return ALL_STATUSES.filter(
+      (s) => s !== "UNNAMED_NO_MATCH" && (lockOk || !LOCK_STATUSES2.includes(s))
+    );
+  }
   var DEFAULT_SETTINGS = {
     version: 2,
     enabled: true,
@@ -2123,14 +2186,14 @@
     if (parsed.version !== 2) return { ...DEFAULT_SETTINGS };
     return { ...DEFAULT_SETTINGS, ...parsed, version: 2 };
   }
-  function loadSettings() {
+  function loadSettings(userRank = null) {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { ...DEFAULT_SETTINGS };
+      if (!raw) return { ...DEFAULT_SETTINGS, enabledStatuses: defaultEnabledStatuses(userRank) };
       return migrateSettings(JSON.parse(raw));
     } catch (err) {
       log.warn("Failed to load settings, using defaults", err);
-      return { ...DEFAULT_SETTINGS };
+      return { ...DEFAULT_SETTINGS, enabledStatuses: defaultEnabledStatuses(userRank) };
     }
   }
   function saveSettings(settings) {
@@ -2142,8 +2205,8 @@
   }
   var SettingsStore = class {
     settings;
-    constructor() {
-      this.settings = loadSettings();
+    constructor(userRank = null) {
+      this.settings = loadSettings(userRank);
     }
     get() {
       return this.settings;
@@ -2502,7 +2565,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       brand.append(
         el("span", "chk-brand-icon", "🇨🇭"),
         el("span", "chk-brand-title", "CH Names"),
-        el("span", "chk-brand-version", `v${"1.14.0"}`)
+        el("span", "chk-brand-version", `v${"1.15.0"}`)
       );
       const toolbar = el("div", "chk-toolbar");
       const rescanBtn = el("button", "chk-btn", t("rescan"));
@@ -2787,7 +2850,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       row.appendChild(locateBtn);
       if (issue.fixable) {
         const fixBtn = el("button", "chk-fix-all", t("fix"));
-        fixBtn.title = t("fixTitle", { name: issue.suggestion ?? "" });
+        fixBtn.title = LOCK_STATUSES.has(issue.status) ? t("fixLockTitle", { n: issue.note?.expectedLock ?? "" }) : t("fixTitle", { name: issue.suggestion ?? "" });
         fixBtn.addEventListener("click", (ev) => {
           ev.stopPropagation();
           this.onFixOne(issue, fixBtn);
@@ -2866,6 +2929,9 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       first?.scrollIntoView({ block: "nearest" });
     }
     onFixOne(issue, button) {
+      if (issue.status === "OVER_LOCK" && !confirm(t("confirmOverLockFix", { n: issue.note?.expectedLock ?? "" }))) {
+        return;
+      }
       void withFixLock(async () => {
         if (button) {
           button.disabled = true;
@@ -2882,7 +2948,9 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     }
     onFixGroup(group, button) {
       const n = Math.min(group.issues.length, GROUP_FIX_CAP);
-      if (n > GROUP_FIX_CONFIRM_THRESHOLD && !confirm(t("confirmGroupFix", { name: group.suggestion ?? "", n }))) {
+      if (group.status === "OVER_LOCK") {
+        if (!confirm(t("confirmOverLockFix", { n: group.note?.expectedLock ?? "" }))) return;
+      } else if (n > GROUP_FIX_CONFIRM_THRESHOLD && !confirm(t("confirmGroupFix", { name: group.suggestion ?? "", n }))) {
         return;
       }
       void withFixLock(async () => {
@@ -3165,7 +3233,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
         buttons.className = "chk-helper-sug";
         const fixBtn = document.createElement("button");
         fixBtn.textContent = t("fix");
-        fixBtn.title = t("fixTitle", { name: issue.suggestion ?? "" });
+        fixBtn.title = LOCK_STATUSES.has(issue.status) ? t("fixLockTitle", { n: issue.note?.expectedLock ?? "" }) : t("fixTitle", { name: issue.suggestion ?? "" });
         fixBtn.addEventListener("click", () => this.onFixOne(issue, fixBtn));
         buttons.appendChild(fixBtn);
         const group = issuesInSameGroup(snapshot.issues, issue);
@@ -3191,6 +3259,9 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       }
     }
     onFixOne(issue, button) {
+      if (issue.status === "OVER_LOCK" && !confirm(t("confirmOverLockFix", { n: issue.note?.expectedLock ?? "" }))) {
+        return;
+      }
       void withFixLock(async () => {
         if (button) {
           button.disabled = true;
@@ -3210,7 +3281,9 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     }
     onFixGroup(issue, group, button) {
       const n = Math.min(group.length, GROUP_FIX_CAP);
-      if (n > GROUP_FIX_CONFIRM_THRESHOLD && !confirm(t("confirmGroupFix", { name: issue.suggestion ?? "", n }))) {
+      if (issue.status === "OVER_LOCK") {
+        if (!confirm(t("confirmOverLockFix", { n: issue.note?.expectedLock ?? "" }))) return;
+      } else if (n > GROUP_FIX_CONFIRM_THRESHOLD && !confirm(t("confirmGroupFix", { name: issue.suggestion ?? "", n }))) {
         return;
       }
       void withFixLock(async () => {
@@ -3243,7 +3316,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
   async function main() {
     const sdk2 = await initSdk();
     await sdk2.Events.once({ eventName: "wme-ready" });
-    const settings = new SettingsStore();
+    const settings = new SettingsStore(sdk2.State.getUserInfo()?.rank ?? null);
     setLocale(resolveLocale(settings.get().language, sdk2.Settings.getLocale().localeCode));
     const fetcher = new TileFetcher(void 0, void 0, new IdbTileStore());
     const scanner = new Scanner(sdk2, fetcher, settings);
@@ -3265,7 +3338,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.14.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.15.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

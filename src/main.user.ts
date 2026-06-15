@@ -14,7 +14,8 @@ async function main(): Promise<void> {
   const sdk = await initSdk();
   await sdk.Events.once({ eventName: "wme-ready" });
 
-  const settings = new SettingsStore();
+  // Rank gates the default-on lock categories; SDK is ready (wme-ready) so rank is available.
+  const settings = new SettingsStore(sdk.State.getUserInfo()?.rank ?? null);
   setLocale(resolveLocale(settings.get().language, sdk.Settings.getLocale().localeCode));
   const fetcher = new TileFetcher(undefined, undefined, new IdbTileStore());
   const scanner = new Scanner(sdk, fetcher, settings);

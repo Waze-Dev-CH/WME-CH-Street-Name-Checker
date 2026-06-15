@@ -1,4 +1,4 @@
-import type { WmeSDK } from "wme-sdk-typings";
+import type { UserRank, WmeSDK } from "wme-sdk-typings";
 import { t } from "./i18n";
 import { log } from "./log";
 import type { Issue } from "./matching/evaluate";
@@ -6,6 +6,9 @@ import type { Settings } from "./settings";
 
 export const GROUP_FIX_CAP = 50;
 export const GROUP_FIX_CONFIRM_THRESHOLD = 20;
+
+/** Lock-level issues: fixed by setting the lock rank, not by applying a name. */
+export const LOCK_STATUSES = new Set<Issue["status"]>(["UNDER_LOCK", "OVER_LOCK"]);
 
 /** Error codes double as i18n string keys (see src/i18n.ts). */
 export type FixErrorCode =
@@ -36,6 +39,9 @@ export function formatFixError(outcome: FixOutcome): string {
 export function fixSegment(sdk: WmeSDK, issue: Issue, settings: Settings): FixOutcome {
   const segmentId = issue.segmentId;
   const fail = (errorCode: FixErrorCode): FixOutcome => ({ segmentId, ok: false, errorCode });
+
+  // Lock issues have no suggestion; handle before the name-fix gate below.
+  if (LOCK_STATUSES.has(issue.status)) return fixLock(sdk, issue);
 
   if (!issue.fixable || !issue.suggestion) return fail("errNotFixable");
   if (!sdk.Editing.isEditingAllowed()) return fail("errEditingNotAllowed");
@@ -79,6 +85,49 @@ export function fixSegment(sdk: WmeSDK, issue: Issue, settings: Settings): FixOu
     return { segmentId, ok: true };
   } catch (err) {
     log.error(`Fix failed for segment ${segmentId}`, err);
+    return {
+      segmentId,
+      ok: false,
+      errorDetail: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+/**
+ * Apply the expected lock rank (carried in the issue note) to a segment.
+ * Never saves. A target above the editor's own rank is rejected by the SDK and
+ * surfaced through errorDetail, like any other unexpected failure.
+ */
+function fixLock(sdk: WmeSDK, issue: Issue): FixOutcome {
+  const segmentId = issue.segmentId;
+  const fail = (errorCode: FixErrorCode): FixOutcome => ({ segmentId, ok: false, errorCode });
+
+  // The note carries the expected lock LEVEL (1-6); the SDK lockRank is 0-based.
+  const expectedLevel = issue.note?.expectedLock;
+  if (expectedLevel == null) return fail("errNotFixable");
+  if (!sdk.Editing.isEditingAllowed()) return fail("errEditingNotAllowed");
+
+  // WME forbids locking above your own editor level. Report it in 1-6 level terms
+  // instead of leaking WME's raw 0-based "lock rank" wording.
+  const userRank = sdk.State.getUserInfo()?.rank;
+  if (typeof userRank === "number" && expectedLevel > userRank + 1) {
+    return {
+      segmentId,
+      ok: false,
+      errorDetail: t("errLockAboveRank", { expected: expectedLevel, user: userRank + 1 }),
+    };
+  }
+
+  try {
+    const segment = sdk.DataModel.Segments.getById({ segmentId });
+    if (!segment) return fail("errSegmentUnloaded");
+    const targetRank = expectedLevel - 1;
+    // Already at the expected level (stale list, repeated group fix): no empty edit.
+    if (segment.lockRank === targetRank) return { segmentId, ok: true };
+    sdk.DataModel.Segments.updateSegment({ segmentId, lockRank: targetRank as UserRank });
+    return { segmentId, ok: true };
+  } catch (err) {
+    log.error(`Lock fix failed for segment ${segmentId}`, err);
     return {
       segmentId,
       ok: false,

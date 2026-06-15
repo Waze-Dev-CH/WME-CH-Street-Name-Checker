@@ -42,9 +42,9 @@ export interface IssueNote {
   existsIn?: string;
   /** Distance to the official axis of the CURRENT name (WRONG_STREET review aid). */
   ownDistanceM?: number;
-  /** Current lock rank of the segment (UNDER_LOCK / OVER_LOCK). */
+  /** Current lock LEVEL (1-6 as shown in WME) of the segment (UNDER_LOCK / OVER_LOCK). */
   currentLock?: number;
-  /** Minimum lock rank expected for the road type (UNDER_LOCK / OVER_LOCK). */
+  /** Expected lock LEVEL (1-6) for the road type; the fix converts it back to lockRank. */
   expectedLock?: number;
 }
 

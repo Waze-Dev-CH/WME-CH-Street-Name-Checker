@@ -50,6 +50,25 @@ export const ALL_STATUSES: IssueStatus[] = [
   "UNNAMED_NO_MATCH",
 ];
 
+/** Lock-level checks gated behind a minimum editor rank by default. */
+const LOCK_STATUSES: IssueStatus[] = ["UNDER_LOCK", "OVER_LOCK"];
+
+/**
+ * Minimum editor rank (getUserInfo().rank scale) for the lock checks to be ON by
+ * default. "Editor level 3+" under WME's level = rank + 1 convention, so rank >= 2.
+ * Lower ranks rarely manage locks, so the categories start off; the user can still
+ * enable them in the status grid. Confirm the scale on a live account.
+ */
+export const LOCK_DEFAULT_MIN_RANK = 2;
+
+/** First-run default statuses: all but UNNAMED_NO_MATCH, minus locks below the rank gate. */
+export function defaultEnabledStatuses(userRank: number | null): IssueStatus[] {
+  const lockOk = userRank !== null && userRank >= LOCK_DEFAULT_MIN_RANK;
+  return ALL_STATUSES.filter(
+    (s) => s !== "UNNAMED_NO_MATCH" && (lockOk || !LOCK_STATUSES.includes(s)),
+  );
+}
+
 export interface Settings {
   version: 2;
   /** Master switch: off disables scanning, the layer and the edit-panel box. */
@@ -111,14 +130,15 @@ export function migrateSettings(parsed: Omit<Partial<Settings>, "version"> & { v
   return { ...DEFAULT_SETTINGS, ...parsed, version: 2 };
 }
 
-export function loadSettings(): Settings {
+export function loadSettings(userRank: number | null = null): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_SETTINGS };
+    // First run: gate the lock categories on the editor rank (see defaultEnabledStatuses).
+    if (!raw) return { ...DEFAULT_SETTINGS, enabledStatuses: defaultEnabledStatuses(userRank) };
     return migrateSettings(JSON.parse(raw) as Partial<Settings>);
   } catch (err) {
     log.warn("Failed to load settings, using defaults", err);
-    return { ...DEFAULT_SETTINGS };
+    return { ...DEFAULT_SETTINGS, enabledStatuses: defaultEnabledStatuses(userRank) };
   }
 }
 
@@ -134,8 +154,8 @@ export function saveSettings(settings: Settings): void {
 export class SettingsStore {
   private settings: Settings;
 
-  constructor() {
-    this.settings = loadSettings();
+  constructor(userRank: number | null = null) {
+    this.settings = loadSettings(userRank);
   }
 
   get(): Settings {

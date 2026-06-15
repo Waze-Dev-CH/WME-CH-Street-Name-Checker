@@ -32,21 +32,43 @@ function issue(overrides: Partial<Issue> = {}): Issue {
   };
 }
 
-/** Minimal SDK stub where every street fix succeeds. */
-function makeSdk(): { sdk: WmeSDK; updates: number[] } {
+interface LockUpdate {
+  segmentId: number;
+  lockRank: number;
+}
+
+/**
+ * Minimal SDK stub where every street fix succeeds. `lockRank` is the segment's
+ * current 0-based lock; `userRank` is the editor's 0-based rank (default high so
+ * lock fixes are never blocked by the rank ceiling).
+ */
+function makeSdk(
+  lockRank = 0,
+  userRank = 5,
+): {
+  sdk: WmeSDK;
+  updates: number[];
+  lockUpdates: LockUpdate[];
+} {
   const updates: number[] = [];
+  const lockUpdates: LockUpdate[] = [];
   const sdk = {
     Editing: { isEditingAllowed: () => true },
+    State: { getUserInfo: () => ({ rank: userRank }) },
     DataModel: {
       Segments: {
         getById: ({ segmentId }: { segmentId: number }) => ({
           id: segmentId,
           primaryStreetId: 100,
           alternateStreetIds: [],
+          lockRank,
         }),
         getAddress: () => ({ city: { id: 10, name: "Lausanne" } }),
         updateAddress: ({ segmentId }: { segmentId: number }) => {
           updates.push(segmentId);
+        },
+        updateSegment: (args: { segmentId: number; lockRank: number }) => {
+          lockUpdates.push({ segmentId: args.segmentId, lockRank: args.lockRank });
         },
       },
       Streets: {
@@ -55,7 +77,7 @@ function makeSdk(): { sdk: WmeSDK; updates: number[] } {
       },
     },
   } as unknown as WmeSDK;
-  return { sdk, updates };
+  return { sdk, updates, lockUpdates };
 }
 
 describe("fixSegment", () => {
@@ -81,6 +103,69 @@ describe("fixSegment", () => {
     const outcome = fixSegment(sdk, issue({ fixable: false, suggestion: null }), DEFAULT_SETTINGS);
     expect(outcome.ok).toBe(false);
     expect(outcome.errorCode).toBe("errNotFixable");
+  });
+});
+
+describe("fixSegment (lock)", () => {
+  // note.expectedLock is a 1-6 level; the fix writes lockRank = level - 1.
+  const lockIssue = (status: Issue["status"], expectedLevel: number): Issue =>
+    issue({ status, suggestion: null, note: { currentLock: 1, expectedLock: expectedLevel } });
+
+  it("raises an under-locked segment to the expected level (level - 1 lockRank)", () => {
+    const { sdk, lockUpdates } = makeSdk(0);
+    const outcome = fixSegment(sdk, lockIssue("UNDER_LOCK", 3), DEFAULT_SETTINGS); // L3 -> lockRank 2
+    expect(outcome.ok).toBe(true);
+    expect(lockUpdates).toEqual([{ segmentId: expect.any(Number), lockRank: 2 }]);
+  });
+
+  it("lowers an over-locked segment to the expected level", () => {
+    const { sdk, lockUpdates } = makeSdk(4);
+    const outcome = fixSegment(sdk, lockIssue("OVER_LOCK", 2), DEFAULT_SETTINGS); // L2 -> lockRank 1
+    expect(outcome.ok).toBe(true);
+    expect(lockUpdates).toEqual([{ segmentId: expect.any(Number), lockRank: 1 }]);
+  });
+
+  it("does nothing when the lock is already at the expected level (no empty edit)", () => {
+    const { sdk, lockUpdates } = makeSdk(2); // already lockRank 2 = level 3
+    const outcome = fixSegment(sdk, lockIssue("UNDER_LOCK", 3), DEFAULT_SETTINGS);
+    expect(outcome.ok).toBe(true);
+    expect(lockUpdates).toHaveLength(0);
+  });
+
+  it("refuses when the note carries no expected level", () => {
+    const { sdk } = makeSdk();
+    const outcome = fixSegment(sdk, issue({ status: "UNDER_LOCK", suggestion: null, note: null }), DEFAULT_SETTINGS);
+    expect(outcome.ok).toBe(false);
+    expect(outcome.errorCode).toBe("errNotFixable");
+  });
+
+  it("reports editing-not-allowed without touching the segment", () => {
+    const { sdk, lockUpdates } = makeSdk(0);
+    (sdk.Editing as { isEditingAllowed: unknown }).isEditingAllowed = () => false;
+    const outcome = fixSegment(sdk, lockIssue("UNDER_LOCK", 3), DEFAULT_SETTINGS);
+    expect(outcome.ok).toBe(false);
+    expect(outcome.errorCode).toBe("errEditingNotAllowed");
+    expect(lockUpdates).toHaveLength(0);
+  });
+
+  it("rejects a target level above the editor level with a level-based message", () => {
+    const { sdk, lockUpdates } = makeSdk(0, 2); // editor rank 2 = level 3
+    const outcome = fixSegment(sdk, lockIssue("UNDER_LOCK", 4), DEFAULT_SETTINGS); // wants L4 > L3
+    expect(outcome.ok).toBe(false);
+    expect(outcome.errorDetail).toContain("L4");
+    expect(outcome.errorDetail).toContain("L3");
+    expect(lockUpdates).toHaveLength(0);
+  });
+
+  it("surfaces an unexpected SDK rejection as errorDetail", () => {
+    const { sdk } = makeSdk(0);
+    (sdk.DataModel.Segments as { updateSegment: unknown }).updateSegment = () => {
+      throw new Error("boom");
+    };
+    const outcome = fixSegment(sdk, lockIssue("UNDER_LOCK", 5), DEFAULT_SETTINGS);
+    expect(outcome.ok).toBe(false);
+    expect(outcome.errorCode).toBeUndefined();
+    expect(outcome.errorDetail).toBe("boom");
   });
 });
 

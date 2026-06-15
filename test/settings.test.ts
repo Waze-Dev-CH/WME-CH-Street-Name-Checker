@@ -1,5 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { ALL_STATUSES, DEFAULT_SETTINGS, migrateSettings } from "../src/settings";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  ALL_STATUSES,
+  DEFAULT_SETTINGS,
+  defaultEnabledStatuses,
+  LOCK_DEFAULT_MIN_RANK,
+  loadSettings,
+  migrateSettings,
+} from "../src/settings";
 
 describe("migrateSettings", () => {
   it("returns defaults for unknown versions", () => {
@@ -42,5 +49,67 @@ describe("ALL_STATUSES", () => {
     expect(ALL_STATUSES).toContain("UNNAMED_NO_MATCH");
     expect(DEFAULT_SETTINGS.enabledStatuses).not.toContain("UNNAMED_NO_MATCH");
     expect(DEFAULT_SETTINGS.enabledStatuses).toContain("UNNAMED");
+  });
+});
+
+describe("defaultEnabledStatuses (lock categories gated on editor rank)", () => {
+  it("excludes the lock checks when the rank is unknown", () => {
+    const s = defaultEnabledStatuses(null);
+    expect(s).not.toContain("UNDER_LOCK");
+    expect(s).not.toContain("OVER_LOCK");
+  });
+
+  it("excludes the lock checks below the rank threshold", () => {
+    const s = defaultEnabledStatuses(LOCK_DEFAULT_MIN_RANK - 1);
+    expect(s).not.toContain("UNDER_LOCK");
+    expect(s).not.toContain("OVER_LOCK");
+  });
+
+  it("includes the lock checks at or above the rank threshold", () => {
+    const s = defaultEnabledStatuses(LOCK_DEFAULT_MIN_RANK);
+    expect(s).toContain("UNDER_LOCK");
+    expect(s).toContain("OVER_LOCK");
+  });
+
+  it("always hides UNNAMED_NO_MATCH regardless of rank", () => {
+    expect(defaultEnabledStatuses(null)).not.toContain("UNNAMED_NO_MATCH");
+    expect(defaultEnabledStatuses(6)).not.toContain("UNNAMED_NO_MATCH");
+  });
+
+  it("matches the static default for ranks at or above the threshold", () => {
+    expect(defaultEnabledStatuses(LOCK_DEFAULT_MIN_RANK)).toEqual(DEFAULT_SETTINGS.enabledStatuses);
+  });
+});
+
+describe("loadSettings", () => {
+  const store = new Map<string, string>();
+  const localStorageStub = {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => void store.set(k, v),
+    removeItem: (k: string) => void store.delete(k),
+    clear: () => store.clear(),
+  };
+
+  beforeEach(() => {
+    store.clear();
+    vi.stubGlobal("localStorage", localStorageStub);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("gates the lock categories on the editor rank on first run", () => {
+    expect(loadSettings(LOCK_DEFAULT_MIN_RANK - 1).enabledStatuses).not.toContain("UNDER_LOCK");
+    expect(loadSettings(LOCK_DEFAULT_MIN_RANK).enabledStatuses).toContain("UNDER_LOCK");
+  });
+
+  it("respects stored settings and ignores the rank", () => {
+    store.set(
+      "wme-ch-name-check.settings",
+      JSON.stringify({ version: 2, enabledStatuses: ["UNDER_LOCK"] }),
+    );
+    // rank below threshold, but the stored choice wins
+    expect(loadSettings(0).enabledStatuses).toEqual(["UNDER_LOCK"]);
   });
 });

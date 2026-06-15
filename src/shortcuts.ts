@@ -39,6 +39,13 @@ export function registerShortcuts(
     if (selection?.objectType !== "segment" || selection.ids.length !== 1) return;
     const issue = scanner.getSnapshot().issues.get(selection.ids[0] as number);
     if (!issue?.fixable) return;
+    // Lowering an over-lock is often unwanted; confirm before applying.
+    if (
+      issue.status === "OVER_LOCK" &&
+      !confirm(t("confirmOverLockFix", { n: issue.note?.expectedLock ?? "" }))
+    ) {
+      return;
+    }
     void withFixLock(async () => fixSegment(sdk, issue, settings.get())).then((result) => {
       if (result !== null) scanner.reevaluate();
     });

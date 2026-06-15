@@ -119,26 +119,32 @@ describe("NARROW_MISUSE", () => {
 });
 
 describe("lock level (UNDER_LOCK / OVER_LOCK)", () => {
-  it("flags a street locked below the Swiss minimum", () => {
-    const s = seg({ roadType: 1, lockRank: 0 } as Partial<Segment>); // expected L1
+  // Notes are in 1-6 levels; segment.lockRank is 0-based, so level = lockRank + 1.
+  it("flags a segment locked below the Swiss standard", () => {
+    const s = seg({ roadType: 7, lockRank: 0 } as Partial<Segment>); // Minor Highway L1, expects L3
     const issues = evaluateGuidelines([s], noAddress);
     expect(statusOf(issues, s.id)).toBe("UNDER_LOCK");
-    const note = issues.find((i) => i.segmentId === s.id)?.note;
-    expect(note).toMatchObject({ currentLock: 0, expectedLock: 1 });
+    const found = issues.find((i) => i.segmentId === s.id);
+    expect(found?.note).toMatchObject({ currentLock: 1, expectedLock: 3 });
+    expect(found?.fixable).toBe(true);
   });
 
-  it("flags a street locked above the Swiss minimum", () => {
-    const s = seg({ roadType: 2, lockRank: 4 } as Partial<Segment>); // expected L2
+  it("flags a segment locked above the Swiss standard", () => {
+    const s = seg({ roadType: 2, lockRank: 4 } as Partial<Segment>); // Primary Street L5, expects L2
     const issues = evaluateGuidelines([s], noAddress);
     expect(statusOf(issues, s.id)).toBe("OVER_LOCK");
-    expect(issues.find((i) => i.segmentId === s.id)?.note).toMatchObject({
-      currentLock: 4,
-      expectedLock: 2,
-    });
+    const found = issues.find((i) => i.segmentId === s.id);
+    expect(found?.note).toMatchObject({ currentLock: 5, expectedLock: 2 });
+    expect(found?.fixable).toBe(true);
   });
 
-  it("accepts a segment locked exactly at the expected minimum", () => {
-    const s = seg({ roadType: 6, lockRank: 4 } as Partial<Segment>); // expected L4
+  it("accepts a segment locked exactly at the expected level", () => {
+    const s = seg({ roadType: 6, lockRank: 3 } as Partial<Segment>); // Major Highway L4, expects L4
+    expect(evaluateGuidelines([s], noAddress)).toHaveLength(0);
+  });
+
+  it("accepts a Street correctly at level 1 (lockRank 0)", () => {
+    const s = seg({ roadType: 1, lockRank: 0 } as Partial<Segment>); // Street L1, expects L1
     expect(evaluateGuidelines([s], noAddress)).toHaveLength(0);
   });
 
@@ -155,5 +161,21 @@ describe("lock level (UNDER_LOCK / OVER_LOCK)", () => {
   it("does not apply Swiss lock rules to foreign segments", () => {
     const s = seg({ roadType: 3, lockRank: 0 } as Partial<Segment>); // would be UNDER_LOCK in CH
     expect(evaluateGuidelines([s], frenchAddress, 1)).toHaveLength(0);
+  });
+});
+
+describe("structural flag (lock decoupled from guideline checks)", () => {
+  it("runs only the lock check when structural is false", () => {
+    const micro = seg({ roadType: 1, length: 3, lockRank: 0 } as Partial<Segment>); // would be MICRO_SEGMENT
+    const underLock = seg({ roadType: 7, lockRank: 0 } as Partial<Segment>); // UNDER_LOCK
+    const issues = evaluateGuidelines([micro, underLock], noAddress, null, { structural: false });
+    // micro has a name-free geometry problem but structural checks are off
+    expect(statusOf(issues, micro.id)).toBeUndefined();
+    expect(statusOf(issues, underLock.id)).toBe("UNDER_LOCK");
+  });
+
+  it("still runs structural checks by default (structural defaults to true)", () => {
+    const micro = seg({ roadType: 1, length: 3 } as Partial<Segment>);
+    expect(statusOf(evaluateGuidelines([micro], noAddress), micro.id)).toBe("MICRO_SEGMENT");
   });
 });

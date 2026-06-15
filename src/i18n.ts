@@ -35,6 +35,9 @@ const en = {
   fixAll: "Fix all ({n})",
   fix: "Fix",
   fixTitle: 'Apply "{name}"',
+  fixLockTitle: "Set lock to L{n}",
+  confirmOverLockFix:
+    "This segment is locked above the Swiss minimum (often intentional). Lower the lock to L{n}?",
   confirmGroupFix:
     'Apply "{name}" to {n} segments?\nNothing is saved automatically; review and save in WME.',
   fixFailed: "Fix failed: {error}",
@@ -90,6 +93,7 @@ const en = {
   errSegmentUnloaded: "Segment no longer loaded",
   errNoCity: "Segment has no city; set the city first",
   errStreetCreate: "Could not find or create the street record",
+  errLockAboveRank: "Lock L{expected} is above your editor level (L{user})",
 };
 
 export type StringKey = keyof typeof en;
@@ -128,6 +132,9 @@ const fr: Record<StringKey, string> = {
   fixAll: "Tout corriger ({n})",
   fix: "Corriger",
   fixTitle: "Appliquer «{name}»",
+  fixLockTitle: "Régler le verrou sur L{n}",
+  confirmOverLockFix:
+    "Ce segment est verrouillé au-dessus du minimum suisse (souvent volontaire). Abaisser le verrou à L{n} ?",
   confirmGroupFix:
     "Appliquer «{name}» à {n} segments ?\nRien n'est sauvegardé automatiquement; relisez et sauvez dans WME.",
   fixFailed: "Échec de la correction: {error}",
@@ -183,6 +190,7 @@ const fr: Record<StringKey, string> = {
   errSegmentUnloaded: "Segment plus chargé",
   errNoCity: "Segment sans ville; définissez d'abord la ville",
   errStreetCreate: "Impossible de trouver ou de créer la rue",
+  errLockAboveRank: "Verrou L{expected} au-dessus de ton niveau d'éditeur (L{user})",
 };
 
 const de: Record<StringKey, string> = {
@@ -219,6 +227,9 @@ const de: Record<StringKey, string> = {
   fixAll: "Alle korrigieren ({n})",
   fix: "Korrigieren",
   fixTitle: "«{name}» übernehmen",
+  fixLockTitle: "Sperrstufe auf L{n} setzen",
+  confirmOverLockFix:
+    "Dieses Segment ist über dem Schweizer Minimum gesperrt (oft beabsichtigt). Sperrstufe auf L{n} senken?",
   confirmGroupFix:
     "«{name}» auf {n} Segmente anwenden?\nNichts wird automatisch gespeichert; in WME prüfen und speichern.",
   fixFailed: "Korrektur fehlgeschlagen: {error}",
@@ -274,6 +285,7 @@ const de: Record<StringKey, string> = {
   errSegmentUnloaded: "Segment nicht mehr geladen",
   errNoCity: "Segment ohne Stadt; zuerst die Stadt setzen",
   errStreetCreate: "Strasse konnte nicht gefunden oder erstellt werden",
+  errLockAboveRank: "Sperrstufe L{expected} über deiner Editor-Stufe (L{user})",
 };
 
 const it: Record<StringKey, string> = {
@@ -310,6 +322,9 @@ const it: Record<StringKey, string> = {
   fixAll: "Correggi tutti ({n})",
   fix: "Correggi",
   fixTitle: "Applica «{name}»",
+  fixLockTitle: "Imposta blocco a L{n}",
+  confirmOverLockFix:
+    "Questo segmento è bloccato oltre il minimo svizzero (spesso intenzionale). Abbassare il blocco a L{n}?",
   confirmGroupFix:
     "Applicare «{name}» a {n} segmenti?\nNulla viene salvato automaticamente; rivedi e salva in WME.",
   fixFailed: "Correzione fallita: {error}",
@@ -365,6 +380,7 @@ const it: Record<StringKey, string> = {
   errSegmentUnloaded: "Segmento non più caricato",
   errNoCity: "Segmento senza città; imposta prima la città",
   errStreetCreate: "Impossibile trovare o creare la strada",
+  errLockAboveRank: "Blocco L{expected} oltre il tuo livello editor (L{user})",
 };
 
 export const LOCALES: Record<LocaleCode, Record<StringKey, string>> = { en, fr, de, it };
