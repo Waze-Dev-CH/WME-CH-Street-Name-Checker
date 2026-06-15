@@ -13,7 +13,7 @@ Userscript Tampermonkey pour le [Waze Map Editor](https://www.waze.com/editor) -
 
 ## Description
 
-Compare les noms de rues des segments visibles avec le **répertoire officiel des rues** de la Confédération (swisstopo, base légale [GeoNV](https://www.fedlex.admin.ch/eli/cc/2008/393/fr)), via l'API [api3.geo.admin.ch](https://api3.geo.admin.ch). Le répertoire fédéral est agrégé quotidiennement depuis les données de la mensuration officielle cantonale/communale: rien à gagner à interroger les guichets cantonaux en plus.
+Compare les noms de rues des segments visibles avec le **répertoire officiel des rues** de la Confédération (swisstopo, base légale [GeoNV](https://www.fedlex.admin.ch/eli/cc/2008/393/fr)), via l'API [api3.geo.admin.ch](https://api3.geo.admin.ch). Les données issues de Swisstopo ne sont pas toujours exactes par rapport aux données cantonales et les éditeurs doivent faire preuve de prudence en cas de doute.
 
 ## Fonctionnalités
 
