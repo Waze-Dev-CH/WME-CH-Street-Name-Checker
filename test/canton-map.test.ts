@@ -29,10 +29,14 @@ describe("cantonMapUrl", () => {
     expect(url).toMatch(/map_y=1\d{6}/);
   });
 
-  it("builds a center+scale URL for Geneva and Fribourg", () => {
+  it("builds a center+scale URL for Geneva, Fribourg and Vaud", () => {
     expect(cantonMapUrl("Genève", 6.14, 46.2)).toContain("map.sitg.ge.ch");
     expect(cantonMapUrl("Genève", 6.14, 46.2)).toContain("center=");
     expect(cantonMapUrl("Fribourg", 7.16, 46.8)).toContain("map.geo.fr.ch");
+    // VD is a custom ArcGIS viewer on www.geo.vd.ch (center,scale), not GeoMapFish;
+    // the non-www host 302-redirects and drops the query.
+    expect(cantonMapUrl("Vaud", 6.63, 46.52)).toContain("www.geo.vd.ch");
+    expect(cantonMapUrl("Vaud", 6.63, 46.52)).toContain("center=");
   });
 
   it("builds the Bern and Solothurn specific URLs", () => {
@@ -45,6 +49,9 @@ describe("cantonMapUrl", () => {
   it("returns null for a canton with no configured map URL", () => {
     expect(cantonMapUrl("Zürich", 8.54, 47.37)).toBeNull();
     expect(cantonMapUrl("Nowhere", 8, 47)).toBeNull();
+    // VS/SH recognised as cantons but their map URL scheme is not yet confirmed.
+    expect(cantonMapUrl("Valais", 7.36, 46.23)).toBeNull();
+    expect(cantonMapUrl("Schaffhausen", 8.63, 47.7)).toBeNull();
   });
 });
 

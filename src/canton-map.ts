@@ -59,14 +59,16 @@ export function cantonCodeFromName(name: string | null | undefined): string | nu
 
 /** LV95 envelope/point URL builders per canton, keyed by code. E/N are LV95. */
 const MAP_URL: Record<string, (e: number, n: number) => string> = {
+  // VD: custom ArcGIS viewer (center,scale) on www.geo.vd.ch — the non-www host
+  // 302-redirects and drops the query, so target www directly.
+  vd: (e, n) => centerScale("https://www.geo.vd.ch/", e, n),
   // GeoMapFish: map_x/map_y/map_zoom (+ crosshair).
-  vd: (e, n) => geomapfish("https://geo.vd.ch/", e, n),
   sz: (e, n) => geomapfish("https://map.geo.sz.ch/", e, n),
   ti: (e, n) => geomapfish("https://map.geo.ti.ch/", e, n),
   ne: (e, n) => geomapfish("https://sitn.ne.ch/", e, n),
   ju: (e, n) => geomapfish("https://geo.jura.ch/", e, n),
-  vs: (e, n) => geomapfish("https://geo.vs.ch/", e, n),
-  sh: (e, n) => geomapfish("https://map.geo.sh.ch/", e, n),
+  // VS (geo.vs.ch) is ArcGIS and SH uses a custom viewer — their recenter URL
+  // scheme is unconfirmed, so no button until verified (they stay in NAME_TO_CODE).
   // center=E,N&scale.
   fr: (e, n) => centerScale("https://map.geo.fr.ch/", e, n),
   ge: (e, n) => centerScale("https://map.sitg.ge.ch/", e, n),
