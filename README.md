@@ -2,6 +2,12 @@
   <img src="assets/logo.png" alt="WME CH Street Name Checker" width="440">
 </p>
 
+> [!IMPORTANT]
+> **This project has merged into [WME Switzerland Helper](https://github.com/Waze-Dev-CH/WME-Switzerland-Helper).**
+> This repository is **archived (read-only)** and no longer maintained. The street-name checker
+> now ships as a feature of WME Switzerland Helper — install and follow updates there.
+> 🇫🇷 Ce projet a fusionné dans WME Switzerland Helper · 🇩🇪 Dieses Projekt ist in WME Switzerland Helper aufgegangen · 🇮🇹 Questo progetto è confluito in WME Switzerland Helper.
+
 # WME CH Street Name Checker
 
 **[➜ Installer / Installieren / Installa / Install](https://greasyfork.org/scripts/582690-wme-ch-street-name-checker)** · [Changelog](CHANGELOG.md) · Licence MIT · © Data: swisstopo

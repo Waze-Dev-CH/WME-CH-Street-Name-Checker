@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [Archived] - 2026-06-16
+
+### Changed
+- This project has merged into [WME Switzerland Helper](https://github.com/Waze-Dev-CH/WME-Switzerland-Helper); the repository is archived (read-only) and development continues there. The street-name checker now ships as a feature of that script.
+
 ## [1.18.0] - 2026-06-16
 
 ### Added
