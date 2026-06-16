@@ -4,7 +4,7 @@ import type { Bbox } from "./geoadmin/types";
 import { isFixInFlight } from "./fix";
 import { evaluateGuidelines } from "./guidelines";
 import { log } from "./log";
-import { evaluateSegment, type Issue } from "./matching/evaluate";
+import { evaluateSegment, issueKey, type Issue } from "./matching/evaluate";
 import { OfficialIndex } from "./matching/official-index";
 import { distanceToLinesM, nearestOfficial, SpatialIndex } from "./matching/spatial";
 import { findStreetLinesByName } from "./geoadmin/client";
@@ -294,6 +294,9 @@ export class Scanner {
       userRank === null
         ? allSegments
         : allSegments.filter((seg) => isEditableByRank((seg as Segment).lockRank, userRank));
+    // Findings the editor dismissed as false positives: dropped here so they vanish from
+    // the list, the map layer and the counters alike.
+    const ignored = new Set(settings.ignoredKeys);
     const spatial = settings.geometryMatching ? this.lastSpatialIndex : null;
     const swissCountryId = this.resolveSwissCountryId();
     for (let i = 0; i < segments.length; i++) {
@@ -334,7 +337,9 @@ export class Scanner {
           stats.skipped++;
           break;
         case "issue":
-          if (settings.enabledStatuses.includes(verdict.issue.status)) {
+          if (ignored.has(issueKey(verdict.issue))) {
+            stats.skipped++;
+          } else if (settings.enabledStatuses.includes(verdict.issue.status)) {
             issues.set(verdict.issue.segmentId, verdict.issue);
           } else {
             stats.skipped++;
@@ -363,7 +368,11 @@ export class Scanner {
         structural: settings.guidelineChecks,
       });
       for (const issue of guidelineIssues) {
-        if (!issues.has(issue.segmentId) && settings.enabledStatuses.includes(issue.status)) {
+        if (
+          !issues.has(issue.segmentId) &&
+          settings.enabledStatuses.includes(issue.status) &&
+          !ignored.has(issueKey(issue))
+        ) {
           issues.set(issue.segmentId, issue);
         }
       }

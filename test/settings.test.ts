@@ -37,6 +37,14 @@ describe("migrateSettings", () => {
     expect(DEFAULT_SETTINGS.editableOnly).toBe(false);
     expect(migrateSettings({ version: 2 }).editableOnly).toBe(false);
   });
+
+  it("defaults ignoredKeys to an empty array and preserves stored ones", () => {
+    expect(DEFAULT_SETTINGS.ignoredKeys).toEqual([]);
+    expect(migrateSettings({ version: 2 }).ignoredKeys).toEqual([]);
+    expect(migrateSettings({ version: 2, ignoredKeys: ["1 NOT_FOUND x"] }).ignoredKeys).toEqual([
+      "1 NOT_FOUND x",
+    ]);
+  });
 });
 
 describe("ALL_STATUSES", () => {

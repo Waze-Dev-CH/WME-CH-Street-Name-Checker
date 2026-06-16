@@ -75,6 +75,16 @@ export interface Issue {
   fixable: boolean;
 }
 
+/**
+ * Stable identity of a single finding for the "ignore" list: a segment plus the exact
+ * verdict (status + current name). Renaming the segment or a status change yields a
+ * different key, so the finding is flagged again - this is a per-finding mute, not a
+ * blanket per-segment one.
+ */
+export function issueKey(issue: Pick<Issue, "segmentId" | "status" | "currentName">): string {
+  return `${issue.segmentId} ${issue.status} ${issue.currentName ?? ""}`;
+}
+
 /** Freeway, Ramp, Major Highway, Minor Highway. */
 const HIGHWAY_ROAD_TYPES = new Set([3, 4, 6, 7]);
 

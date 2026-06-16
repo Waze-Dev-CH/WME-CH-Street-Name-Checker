@@ -11,7 +11,7 @@ import {
 } from "../fix";
 import { log } from "../log";
 import { STATUS_STYLES } from "../map-layer";
-import type { Issue } from "../matching/evaluate";
+import { issueKey, type Issue } from "../matching/evaluate";
 import type { Scanner } from "../scan";
 import type { SettingsStore } from "../settings";
 import { formatNote, LEGEND_KEYS, STATE_KEYS, statusEmoji } from "./tab";
@@ -109,7 +109,7 @@ export class EditPanelBox {
     const head = document.createElement("div");
     head.className = "chk-helper-head";
     const title = document.createElement("b");
-    title.textContent = "CH Names";
+    title.textContent = `🇨🇭 ${t("appName")}`;
     const dot = document.createElement("span");
     dot.className = "chk-dot";
     const statusText = document.createElement("span");
@@ -165,9 +165,9 @@ export class EditPanelBox {
       container.appendChild(line);
     }
 
+    const buttons = document.createElement("div");
+    buttons.className = "chk-helper-sug";
     if (issue.fixable) {
-      const buttons = document.createElement("div");
-      buttons.className = "chk-helper-sug";
       const fixBtn = document.createElement("button");
       fixBtn.textContent = t("fix");
       fixBtn.title = LOCK_STATUSES.has(issue.status)
@@ -183,8 +183,22 @@ export class EditPanelBox {
         fixAllBtn.addEventListener("click", () => this.onFixGroup(issue, group, fixAllBtn));
         buttons.appendChild(fixAllBtn);
       }
-      container.appendChild(buttons);
     }
+    // Dismiss a false positive (any status, fixable or not).
+    const ignoreBtn = document.createElement("button");
+    ignoreBtn.textContent = t("ignore");
+    ignoreBtn.title = t("ignoreTitle");
+    ignoreBtn.addEventListener("click", () => this.onIgnore(issue));
+    buttons.appendChild(ignoreBtn);
+    container.appendChild(buttons);
+  }
+
+  private onIgnore(issue: Issue): void {
+    const keys = this.settings.get().ignoredKeys;
+    const key = issueKey(issue);
+    if (!keys.includes(key)) this.settings.update({ ignoredKeys: [...keys, key] });
+    this.scanner.reevaluate();
+    this.schedule();
   }
 
   private isCheckedAndNamed(segmentId: number): boolean {

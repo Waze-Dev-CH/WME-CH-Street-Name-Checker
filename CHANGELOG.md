@@ -3,6 +3,14 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.18.0] - 2026-06-16
+
+### Added
+- An "Ignore" button on every finding (in the edit-panel box and in each list row) dismisses a false positive: it disappears from the list, the map and the counters and stays gone after a reload. The dismissal is tied to the exact finding (segment + status + current name), so renaming the segment or a change of status flags it again. Settings show how many findings are ignored and a "Reset" button to bring them all back. The list is stored locally on your device only.
+
+### Changed
+- The script tab and map layer were renamed for consistency and localised: the sidebar tab now reads "🇨🇭 Street names" (translated per UI language) and the map layer is "Street names" (no flag, since some layer menus render emoji poorly).
+
 ## [1.17.0] - 2026-06-16
 
 ### Added

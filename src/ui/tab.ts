@@ -11,7 +11,7 @@ import {
 } from "../fix";
 import { LANGUAGE_CHOICES, resolveLocale, setLocale, t, type LanguagePreference, type StringKey } from "../i18n";
 import { STATUS_STYLES } from "../map-layer";
-import type { Issue, IssueNote, IssueStatus } from "../matching/evaluate";
+import { issueKey, type Issue, type IssueNote, type IssueStatus } from "../matching/evaluate";
 import type { ScanSnapshot, Scanner } from "../scan";
 import { ALL_STATUSES, ROAD_TYPE_OPTIONS, type CityScoping, type Settings, type SettingsStore } from "../settings";
 import { mapGeoAdminUrlForGeometry } from "../geoadmin/links";
@@ -213,7 +213,7 @@ export class TabUI {
   async init(): Promise<void> {
     injectStyles();
     const { tabLabel, tabPane } = await this.sdk.Sidebar.registerScriptTab();
-    tabLabel.textContent = "CH Names";
+    tabLabel.textContent = `🇨🇭 ${t("appName")}`;
     this.pane = tabPane;
     document.documentElement.classList.toggle("chk-theme-dark", wmeThemeIsDark(this.pane));
     this.buildSkeleton();
@@ -248,7 +248,7 @@ export class TabUI {
     const brand = el("div", "chk-brand");
     brand.append(
       el("span", "chk-brand-icon", "🇨🇭"),
-      el("span", "chk-brand-title", "CH Names"),
+      el("span", "chk-brand-title", t("appName")),
       el("span", "chk-brand-version", `v${__SCRIPT_VERSION__}`),
     );
 
@@ -593,8 +593,22 @@ export class TabUI {
       });
       row.appendChild(fixBtn);
     }
+    const ignoreBtn = el("button", "chk-fix-all", t("ignore"));
+    ignoreBtn.title = t("ignoreTitle");
+    ignoreBtn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      this.onIgnore(issue);
+    });
+    row.appendChild(ignoreBtn);
     row.addEventListener("click", () => this.selectSegment(issue.segmentId));
     return row;
+  }
+
+  private onIgnore(issue: Issue): void {
+    const keys = this.settings.get().ignoredKeys;
+    const key = issueKey(issue);
+    if (!keys.includes(key)) this.settings.update({ ignoredKeys: [...keys, key] });
+    this.scanner.reevaluate();
   }
 
   /** Fit the map to every segment of the group, with padding for context. */
@@ -877,11 +891,22 @@ export class TabUI {
     });
     langRow.appendChild(langSelect);
 
+    const ignoredRow = el("div", "chk-settings-row");
+    ignoredRow.appendChild(el("span", "", t("ignoredCount", { n: settings.ignoredKeys.length })));
+    const resetIgnoredBtn = el("button", "", t("resetIgnored")) as HTMLButtonElement;
+    resetIgnoredBtn.disabled = settings.ignoredKeys.length === 0;
+    resetIgnoredBtn.addEventListener("click", () => {
+      this.settings.update({ ignoredKeys: [] });
+      this.scanner.reevaluate();
+      this.rebuild();
+    });
+    ignoredRow.appendChild(resetIgnoredBtn);
+
     body.append(
       this.buildSubsection("🛣️", t("roadTypesLabel"), [grid]),
       this.buildSubsection("🏷️", t("statusesLabel"), [statusGrid]),
       this.buildSubsection("🎛️", t("optionsLabel"), options),
-      this.buildSubsection("📍", t("scopeDisplayLabel"), [scopingRow, zoomRow, langRow]),
+      this.buildSubsection("📍", t("scopeDisplayLabel"), [scopingRow, zoomRow, langRow, ignoredRow]),
     );
     details.appendChild(body);
     return details;

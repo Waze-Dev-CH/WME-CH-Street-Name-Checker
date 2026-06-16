@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Waze-Dev-CH
-// @version      1.17.0
+// @version      1.18.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -390,9 +390,14 @@
     noteOwnDistance: "its official axis is ~{m} m away",
     noteLock: "L{current} → expected L{expected}",
     fixAll: "Fix all ({n})",
+    appName: "Street names",
     fix: "Fix",
     fixTitle: 'Apply "{name}"',
     fixLockTitle: "Set lock to L{n}",
+    ignore: "Ignore",
+    ignoreTitle: "Hide this finding (false positive) — stored locally on this device",
+    ignoredCount: "{n} ignored",
+    resetIgnored: "Reset",
     confirmOverLockFix: "This segment is locked above the Swiss minimum (often intentional). Lower the lock to L{n}?",
     confirmGroupFix: 'Apply "{name}" to {n} segments?\nNothing is saved automatically; review and save in WME.',
     fixFailed: "Fix failed: {error}",
@@ -442,8 +447,8 @@
     minZoomLabel: "Min zoom to scan:",
     languageLabel: "Language:",
     languageAuto: "Auto (WME)",
-    shortcutNextIssue: "CH Names: select the next issue",
-    shortcutFixSelected: "CH Names: fix the selected segment",
+    shortcutNextIssue: "Street names: select the next issue",
+    shortcutFixSelected: "Street names: fix the selected segment",
     errNotFixable: "Not fixable",
     errEditingNotAllowed: "Editing is not allowed here",
     errSegmentUnloaded: "Segment no longer loaded",
@@ -484,9 +489,14 @@
     noteOwnDistance: "son axe officiel à ~{m} m",
     noteLock: "L{current} → attendu L{expected}",
     fixAll: "Tout corriger ({n})",
+    appName: "Nom des rues",
     fix: "Corriger",
     fixTitle: "Appliquer «{name}»",
     fixLockTitle: "Régler le verrou sur L{n}",
+    ignore: "Ignorer",
+    ignoreTitle: "Masquer ce signalement (faux positif) — stocké localement sur cet appareil",
+    ignoredCount: "{n} ignorés",
+    resetIgnored: "Réinitialiser",
     confirmOverLockFix: "Ce segment est verrouillé au-dessus du minimum suisse (souvent volontaire). Abaisser le verrou à L{n} ?",
     confirmGroupFix: "Appliquer «{name}» à {n} segments ?\nRien n'est sauvegardé automatiquement; relisez et sauvez dans WME.",
     fixFailed: "Échec de la correction: {error}",
@@ -536,8 +546,8 @@
     minZoomLabel: "Zoom minimal pour scanner:",
     languageLabel: "Langue:",
     languageAuto: "Auto (WME)",
-    shortcutNextIssue: "CH Names: sélectionner l'écart suivant",
-    shortcutFixSelected: "CH Names: corriger le segment sélectionné",
+    shortcutNextIssue: "Nom des rues: sélectionner l'écart suivant",
+    shortcutFixSelected: "Nom des rues: corriger le segment sélectionné",
     errNotFixable: "Non corrigeable",
     errEditingNotAllowed: "Édition non autorisée ici",
     errSegmentUnloaded: "Segment plus chargé",
@@ -578,9 +588,14 @@
     noteOwnDistance: "amtliche Achse ~{m} m entfernt",
     noteLock: "L{current} → erwartet L{expected}",
     fixAll: "Alle korrigieren ({n})",
+    appName: "Strassennamen",
     fix: "Korrigieren",
     fixTitle: "«{name}» übernehmen",
     fixLockTitle: "Sperrstufe auf L{n} setzen",
+    ignore: "Ignorieren",
+    ignoreTitle: "Diesen Befund ausblenden (Fehlalarm) — lokal auf diesem Gerät gespeichert",
+    ignoredCount: "{n} ignoriert",
+    resetIgnored: "Zurücksetzen",
     confirmOverLockFix: "Dieses Segment ist über dem Schweizer Minimum gesperrt (oft beabsichtigt). Sperrstufe auf L{n} senken?",
     confirmGroupFix: "«{name}» auf {n} Segmente anwenden?\nNichts wird automatisch gespeichert; in WME prüfen und speichern.",
     fixFailed: "Korrektur fehlgeschlagen: {error}",
@@ -630,8 +645,8 @@
     minZoomLabel: "Minimaler Zoom zum Scannen:",
     languageLabel: "Sprache:",
     languageAuto: "Auto (WME)",
-    shortcutNextIssue: "CH Names: nächste Abweichung auswählen",
-    shortcutFixSelected: "CH Names: ausgewähltes Segment korrigieren",
+    shortcutNextIssue: "Strassennamen: nächste Abweichung auswählen",
+    shortcutFixSelected: "Strassennamen: ausgewähltes Segment korrigieren",
     errNotFixable: "Nicht korrigierbar",
     errEditingNotAllowed: "Bearbeiten ist hier nicht erlaubt",
     errSegmentUnloaded: "Segment nicht mehr geladen",
@@ -672,9 +687,14 @@
     noteOwnDistance: "asse ufficiale a ~{m} m",
     noteLock: "L{current} → atteso L{expected}",
     fixAll: "Correggi tutti ({n})",
+    appName: "Nomi delle strade",
     fix: "Correggi",
     fixTitle: "Applica «{name}»",
     fixLockTitle: "Imposta blocco a L{n}",
+    ignore: "Ignora",
+    ignoreTitle: "Nascondi questa segnalazione (falso positivo) — salvata localmente su questo dispositivo",
+    ignoredCount: "{n} ignorati",
+    resetIgnored: "Reimposta",
     confirmOverLockFix: "Questo segmento è bloccato oltre il minimo svizzero (spesso intenzionale). Abbassare il blocco a L{n}?",
     confirmGroupFix: "Applicare «{name}» a {n} segmenti?\nNulla viene salvato automaticamente; rivedi e salva in WME.",
     fixFailed: "Correzione fallita: {error}",
@@ -724,8 +744,8 @@
     minZoomLabel: "Zoom minimo per la scansione:",
     languageLabel: "Lingua:",
     languageAuto: "Auto (WME)",
-    shortcutNextIssue: "CH Names: seleziona la prossima differenza",
-    shortcutFixSelected: "CH Names: correggi il segmento selezionato",
+    shortcutNextIssue: "Nomi delle strade: seleziona la prossima differenza",
+    shortcutFixSelected: "Nomi delle strade: correggi il segmento selezionato",
     errNotFixable: "Non correggibile",
     errEditingNotAllowed: "La modifica non è consentita qui",
     errSegmentUnloaded: "Segmento non più caricato",
@@ -764,7 +784,10 @@
   }
 
   // src/map-layer.ts
-  var LAYER_NAME = "CH Street Check";
+  var cachedLayerName = null;
+  function getLayerName() {
+    return cachedLayerName ??= t("appName");
+  }
   var LABEL_MIN_ZOOM = 17;
   var STATUS_STYLES = {
     COSMETIC: { strokeColor: "#f7c948", strokeDashstyle: "dash" },
@@ -792,7 +815,7 @@
     settings;
     init() {
       this.sdk.Map.addLayer({
-        layerName: LAYER_NAME,
+        layerName: getLayerName(),
         styleContext: {
           getLabel: ({ feature, zoomLevel }) => {
             if (!this.settings.get().showMapLabels || zoomLevel < LABEL_MIN_ZOOM) return "";
@@ -820,7 +843,7 @@
       });
     }
     sync(issues) {
-      this.sdk.Map.removeAllFeaturesFromLayer({ layerName: LAYER_NAME });
+      this.sdk.Map.removeAllFeaturesFromLayer({ layerName: getLayerName() });
       const features = [...issues.values()].map((issue) => ({
         type: "Feature",
         id: `chk-${issue.segmentId}`,
@@ -832,19 +855,19 @@
         }
       }));
       if (features.length > 0) {
-        this.sdk.Map.addFeaturesToLayer({ layerName: LAYER_NAME, features });
+        this.sdk.Map.addFeaturesToLayer({ layerName: getLayerName(), features });
       }
     }
     setVisible(visible) {
-      this.sdk.Map.setLayerVisibility({ layerName: LAYER_NAME, visibility: visible });
+      this.sdk.Map.setLayerVisibility({ layerName: getLayerName(), visibility: visible });
     }
   };
   function registerLayerCheckbox(sdk2, onToggle) {
-    sdk2.LayerSwitcher.addLayerCheckbox({ name: LAYER_NAME, isChecked: true });
+    sdk2.LayerSwitcher.addLayerCheckbox({ name: getLayerName(), isChecked: true });
     sdk2.Events.on({
       eventName: "wme-layer-checkbox-toggled",
       eventHandler: (payload) => {
-        if (payload.name === LAYER_NAME) onToggle(payload.checked);
+        if (payload.name === getLayerName()) onToggle(payload.checked);
       }
     });
   }
@@ -1616,6 +1639,9 @@
   }
 
   // src/matching/evaluate.ts
+  function issueKey(issue) {
+    return `${issue.segmentId} ${issue.status} ${issue.currentName ?? ""}`;
+  }
   var HIGHWAY_ROAD_TYPES = /* @__PURE__ */ new Set([3, 4, 6, 7]);
   function noteFor(entry) {
     const note = {};
@@ -2012,6 +2038,7 @@
       const allSegments = this.sdk.DataModel.Segments.getAll();
       const userRank = settings.editableOnly ? this.sdk.State.getUserInfo()?.rank ?? null : null;
       const segments = userRank === null ? allSegments : allSegments.filter((seg) => isEditableByRank(seg.lockRank, userRank));
+      const ignored = new Set(settings.ignoredKeys);
       const spatial = settings.geometryMatching ? this.lastSpatialIndex : null;
       const swissCountryId = this.resolveSwissCountryId();
       for (let i = 0; i < segments.length; i++) {
@@ -2045,7 +2072,9 @@
             stats.skipped++;
             break;
           case "issue":
-            if (settings.enabledStatuses.includes(verdict.issue.status)) {
+            if (ignored.has(issueKey(verdict.issue))) {
+              stats.skipped++;
+            } else if (settings.enabledStatuses.includes(verdict.issue.status)) {
               issues.set(verdict.issue.segmentId, verdict.issue);
             } else {
               stats.skipped++;
@@ -2068,7 +2097,7 @@
           structural: settings.guidelineChecks
         });
         for (const issue of guidelineIssues) {
-          if (!issues.has(issue.segmentId) && settings.enabledStatuses.includes(issue.status)) {
+          if (!issues.has(issue.segmentId) && settings.enabledStatuses.includes(issue.status) && !ignored.has(issueKey(issue))) {
             issues.set(issue.segmentId, issue);
           }
         }
@@ -2239,6 +2268,7 @@
     cityScoping: "off",
     showMapLabels: true,
     keepOldNameAsAlt: false,
+    ignoredKeys: [],
     language: "auto",
     guidelineChecks: true,
     editPanelHelper: true,
@@ -2759,7 +2789,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     async init() {
       injectStyles();
       const { tabLabel, tabPane } = await this.sdk.Sidebar.registerScriptTab();
-      tabLabel.textContent = "CH Names";
+      tabLabel.textContent = `🇨🇭 ${t("appName")}`;
       this.pane = tabPane;
       document.documentElement.classList.toggle("chk-theme-dark", wmeThemeIsDark(this.pane));
       this.buildSkeleton();
@@ -2788,8 +2818,8 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       const brand = el("div", "chk-brand");
       brand.append(
         el("span", "chk-brand-icon", "🇨🇭"),
-        el("span", "chk-brand-title", "CH Names"),
-        el("span", "chk-brand-version", `v${"1.17.0"}`)
+        el("span", "chk-brand-title", t("appName")),
+        el("span", "chk-brand-version", `v${"1.18.0"}`)
       );
       const toolbar = el("div", "chk-toolbar");
       const rescanBtn = el("button", "chk-btn", t("rescan"));
@@ -3089,8 +3119,21 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
         });
         row.appendChild(fixBtn);
       }
+      const ignoreBtn = el("button", "chk-fix-all", t("ignore"));
+      ignoreBtn.title = t("ignoreTitle");
+      ignoreBtn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        this.onIgnore(issue);
+      });
+      row.appendChild(ignoreBtn);
       row.addEventListener("click", () => this.selectSegment(issue.segmentId));
       return row;
+    }
+    onIgnore(issue) {
+      const keys = this.settings.get().ignoredKeys;
+      const key = issueKey(issue);
+      if (!keys.includes(key)) this.settings.update({ ignoredKeys: [...keys, key] });
+      this.scanner.reevaluate();
     }
     /** Fit the map to every segment of the group, with padding for context. */
     zoomToGroup(group) {
@@ -3326,11 +3369,21 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
         this.rebuild();
       });
       langRow.appendChild(langSelect);
+      const ignoredRow = el("div", "chk-settings-row");
+      ignoredRow.appendChild(el("span", "", t("ignoredCount", { n: settings.ignoredKeys.length })));
+      const resetIgnoredBtn = el("button", "", t("resetIgnored"));
+      resetIgnoredBtn.disabled = settings.ignoredKeys.length === 0;
+      resetIgnoredBtn.addEventListener("click", () => {
+        this.settings.update({ ignoredKeys: [] });
+        this.scanner.reevaluate();
+        this.rebuild();
+      });
+      ignoredRow.appendChild(resetIgnoredBtn);
       body.append(
         this.buildSubsection("🛣️", t("roadTypesLabel"), [grid]),
         this.buildSubsection("🏷️", t("statusesLabel"), [statusGrid]),
         this.buildSubsection("🎛️", t("optionsLabel"), options),
-        this.buildSubsection("📍", t("scopeDisplayLabel"), [scopingRow, zoomRow, langRow])
+        this.buildSubsection("📍", t("scopeDisplayLabel"), [scopingRow, zoomRow, langRow, ignoredRow])
       );
       details.appendChild(body);
       return details;
@@ -3412,7 +3465,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       const head = document.createElement("div");
       head.className = "chk-helper-head";
       const title = document.createElement("b");
-      title.textContent = "CH Names";
+      title.textContent = `🇨🇭 ${t("appName")}`;
       const dot = document.createElement("span");
       dot.className = "chk-dot";
       const statusText = document.createElement("span");
@@ -3463,9 +3516,9 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
         }
         container.appendChild(line);
       }
+      const buttons = document.createElement("div");
+      buttons.className = "chk-helper-sug";
       if (issue.fixable) {
-        const buttons = document.createElement("div");
-        buttons.className = "chk-helper-sug";
         const fixBtn = document.createElement("button");
         fixBtn.textContent = t("fix");
         fixBtn.title = LOCK_STATUSES.has(issue.status) ? t("fixLockTitle", { n: issue.note?.expectedLock ?? "" }) : t("fixTitle", { name: issue.suggestion ?? "" });
@@ -3478,8 +3531,20 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
           fixAllBtn.addEventListener("click", () => this.onFixGroup(issue, group, fixAllBtn));
           buttons.appendChild(fixAllBtn);
         }
-        container.appendChild(buttons);
       }
+      const ignoreBtn = document.createElement("button");
+      ignoreBtn.textContent = t("ignore");
+      ignoreBtn.title = t("ignoreTitle");
+      ignoreBtn.addEventListener("click", () => this.onIgnore(issue));
+      buttons.appendChild(ignoreBtn);
+      container.appendChild(buttons);
+    }
+    onIgnore(issue) {
+      const keys = this.settings.get().ignoredKeys;
+      const key = issueKey(issue);
+      if (!keys.includes(key)) this.settings.update({ ignoredKeys: [...keys, key] });
+      this.scanner.reevaluate();
+      this.schedule();
     }
     isCheckedAndNamed(segmentId) {
       try {
@@ -3573,7 +3638,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.17.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.18.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

@@ -84,6 +84,8 @@ export interface Settings {
   cityScoping: CityScoping;
   showMapLabels: boolean;
   keepOldNameAsAlt: boolean;
+  /** Findings the editor dismissed as false positives (see issueKey): hidden everywhere. */
+  ignoredKeys: string[];
   language: LanguagePreference;
   guidelineChecks: boolean;
   editPanelHelper: boolean;
@@ -107,6 +109,7 @@ export const DEFAULT_SETTINGS: Settings = {
   cityScoping: "off",
   showMapLabels: true,
   keepOldNameAsAlt: false,
+  ignoredKeys: [],
   language: "auto",
   guidelineChecks: true,
   editPanelHelper: true,

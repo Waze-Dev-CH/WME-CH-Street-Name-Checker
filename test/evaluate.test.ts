@@ -1,7 +1,7 @@
 import type { LineString } from "geojson";
 import type { Segment, SegmentAddress } from "wme-sdk-typings";
 import { describe, expect, it } from "vitest";
-import { evaluateSegment } from "../src/matching/evaluate";
+import { evaluateSegment, issueKey } from "../src/matching/evaluate";
 import { nearestOfficial, SpatialIndex } from "../src/matching/spatial";
 import { OfficialIndex } from "../src/matching/official-index";
 import { DEFAULT_SETTINGS, type Settings } from "../src/settings";
@@ -390,5 +390,23 @@ describe("BILINGUAL status", () => {
       null,
     );
     expect(v.kind).toBe("ok");
+  });
+});
+
+describe("issueKey", () => {
+  const base = { segmentId: 42, status: "NOT_FOUND" as const, currentName: "Rue Test" };
+
+  it("is stable for identical findings", () => {
+    expect(issueKey(base)).toBe(issueKey({ ...base }));
+  });
+
+  it("differs when the status or the current name differs", () => {
+    expect(issueKey(base)).not.toBe(issueKey({ ...base, status: "WRONG_STREET" }));
+    expect(issueKey(base)).not.toBe(issueKey({ ...base, currentName: "Rue Autre" }));
+    expect(issueKey(base)).not.toBe(issueKey({ ...base, segmentId: 43 }));
+  });
+
+  it("handles a null current name", () => {
+    expect(issueKey({ ...base, currentName: null })).toContain("42 NOT_FOUND");
   });
 });

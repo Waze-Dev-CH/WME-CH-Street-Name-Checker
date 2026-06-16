@@ -1,8 +1,18 @@
 import type { WmeSDK } from "wme-sdk-typings";
+import { t } from "./i18n";
 import type { Issue, IssueStatus } from "./matching/evaluate";
 import type { SettingsStore } from "./settings";
 
-export const LAYER_NAME = "CH Street Check";
+let cachedLayerName: string | null = null;
+/**
+ * Localized layer name (no flag emoji — some layer menus render it poorly), captured once on
+ * first use. The WME layer is registered with this string as its id and the checkbox-toggle
+ * match compares against it, so it must stay stable even if the UI language changes
+ * mid-session; a reload picks up the new language.
+ */
+export function getLayerName(): string {
+  return (cachedLayerName ??= t("appName"));
+}
 const LABEL_MIN_ZOOM = 17;
 
 interface StatusStyle {
@@ -36,7 +46,7 @@ export class HighlightLayer {
 
   init(): void {
     this.sdk.Map.addLayer({
-      layerName: LAYER_NAME,
+      layerName: getLayerName(),
       styleContext: {
         getLabel: ({ feature, zoomLevel }) => {
           if (!this.settings.get().showMapLabels || zoomLevel < LABEL_MIN_ZOOM) return "";
@@ -65,7 +75,7 @@ export class HighlightLayer {
   }
 
   sync(issues: ReadonlyMap<number, Issue>): void {
-    this.sdk.Map.removeAllFeaturesFromLayer({ layerName: LAYER_NAME });
+    this.sdk.Map.removeAllFeaturesFromLayer({ layerName: getLayerName() });
     const features = [...issues.values()]
       .map((issue) => ({
         type: "Feature" as const,
@@ -78,22 +88,22 @@ export class HighlightLayer {
         },
       }));
     if (features.length > 0) {
-      this.sdk.Map.addFeaturesToLayer({ layerName: LAYER_NAME, features });
+      this.sdk.Map.addFeaturesToLayer({ layerName: getLayerName(), features });
     }
   }
 
   setVisible(visible: boolean): void {
-    this.sdk.Map.setLayerVisibility({ layerName: LAYER_NAME, visibility: visible });
+    this.sdk.Map.setLayerVisibility({ layerName: getLayerName(), visibility: visible });
   }
 }
 
 /** Layer-switcher checkbox controlling both layer visibility and scan pausing. */
 export function registerLayerCheckbox(sdk: WmeSDK, onToggle: (checked: boolean) => void): void {
-  sdk.LayerSwitcher.addLayerCheckbox({ name: LAYER_NAME, isChecked: true });
+  sdk.LayerSwitcher.addLayerCheckbox({ name: getLayerName(), isChecked: true });
   sdk.Events.on({
     eventName: "wme-layer-checkbox-toggled",
     eventHandler: (payload) => {
-      if (payload.name === LAYER_NAME) onToggle(payload.checked);
+      if (payload.name === getLayerName()) onToggle(payload.checked);
     },
   });
 }
