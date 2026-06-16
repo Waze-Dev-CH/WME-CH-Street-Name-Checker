@@ -105,6 +105,82 @@ describe("fixSegment", () => {
     expect(outcome.ok).toBe(false);
     expect(outcome.errorCode).toBe("errNotFixable");
   });
+
+  // SDK stub that assigns a distinct street id per name (in request order, from 200) and
+  // records the address passed to updateAddress, so BILINGUAL handling can be asserted.
+  function makeNamedSdk(primaryStreetId = 100): {
+    sdk: WmeSDK;
+    update: () => { primaryStreetId: number; alternateStreetIds: number[] } | null;
+  } {
+    const ids = new Map<string, number>();
+    let nextStreetId = 200;
+    const idFor = (name: string) => {
+      let id = ids.get(name);
+      if (id === undefined) {
+        id = nextStreetId++;
+        ids.set(name, id);
+      }
+      return id;
+    };
+    let captured: { primaryStreetId: number; alternateStreetIds: number[] } | null = null;
+    const sdk = {
+      Editing: { isEditingAllowed: () => true },
+      State: { getUserInfo: () => ({ rank: 5 }) },
+      DataModel: {
+        Segments: {
+          getById: ({ segmentId }: { segmentId: number }) => ({
+            id: segmentId,
+            primaryStreetId,
+            alternateStreetIds: [],
+            lockRank: 0,
+          }),
+          getAddress: () => ({ city: { id: 10, name: "Biel/Bienne" } }),
+          updateAddress: (args: { primaryStreetId: number; alternateStreetIds: number[] }) => {
+            captured = { primaryStreetId: args.primaryStreetId, alternateStreetIds: args.alternateStreetIds };
+          },
+        },
+        Streets: {
+          getStreet: ({ streetName }: { streetName: string }) => ({
+            id: idFor(streetName),
+            name: streetName,
+          }),
+          addStreet: ({ streetName }: { streetName: string }) => ({
+            id: idFor(streetName),
+            name: streetName,
+          }),
+        },
+      },
+    } as unknown as WmeSDK;
+    return { sdk, update: () => captured };
+  }
+
+  it("splits a slash-in-primary bilingual name: primary = first part, other as alternate", () => {
+    const { sdk, update } = makeNamedSdk();
+    const bilingual = issue({
+      status: "BILINGUAL",
+      currentName: "Unterer Quai / Quai du Bas",
+      suggestion: "Unterer Quai",
+      note: { fullLabel: "Unterer Quai / Quai du Bas", altLabels: ["Quai du Bas"] },
+    });
+    const outcome = fixSegment(sdk, bilingual, DEFAULT_SETTINGS);
+    expect(outcome.ok).toBe(true);
+    // First requested name "Unterer Quai" -> 200 (primary), "Quai du Bas" -> 201 (alternate).
+    expect(update()).toEqual({ primaryStreetId: 200, alternateStreetIds: [201] });
+  });
+
+  it("adds a missing alternate while keeping the chosen primary language", () => {
+    // The primary street ("Quai du Bas" -> 200) is already correct; only the alternate is added.
+    const { sdk, update } = makeNamedSdk(200);
+    const bilingual = issue({
+      status: "BILINGUAL",
+      currentName: "Quai du Bas",
+      suggestion: "Quai du Bas",
+      note: { fullLabel: "Unterer Quai / Quai du Bas", altLabels: ["Unterer Quai"] },
+    });
+    const outcome = fixSegment(sdk, bilingual, DEFAULT_SETTINGS);
+    expect(outcome.ok).toBe(true);
+    expect(update()).toEqual({ primaryStreetId: 200, alternateStreetIds: [201] });
+  });
 });
 
 describe("fixSegment (lock)", () => {

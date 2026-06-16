@@ -31,6 +31,17 @@ export function formatFixError(outcome: FixOutcome): string {
   return outcome.errorDetail ?? "?";
 }
 
+/** Find an existing Street by name in the city, or create it; null if neither works. */
+function findOrCreateStreet(sdk: WmeSDK, streetName: string, cityId: number) {
+  const existing = sdk.DataModel.Streets.getStreet({ streetName, cityId });
+  if (existing) return existing;
+  try {
+    return sdk.DataModel.Streets.addStreet({ streetName, cityId });
+  } catch {
+    return sdk.DataModel.Streets.getStreet({ streetName, cityId });
+  }
+}
+
 /**
  * Apply the suggested official name to a segment: find or create the Street
  * record in the segment's city, then update the segment's primary address.
@@ -53,17 +64,8 @@ export function fixSegment(sdk: WmeSDK, issue: Issue, settings: Settings): FixOu
     const cityId = address.city?.id;
     if (cityId == null) return fail("errNoCity");
 
-    let street = sdk.DataModel.Streets.getStreet({ streetName: issue.suggestion, cityId });
-    if (!street) {
-      try {
-        street = sdk.DataModel.Streets.addStreet({ streetName: issue.suggestion, cityId });
-      } catch {
-        street = sdk.DataModel.Streets.getStreet({ streetName: issue.suggestion, cityId });
-      }
-    }
+    const street = findOrCreateStreet(sdk, issue.suggestion, cityId);
     if (!street) return fail("errStreetCreate");
-    // Already correct (stale list, repeated group fix): no empty edit.
-    if (segment.primaryStreetId === street.id) return { segmentId, ok: true };
 
     // Alternates must be passed back explicitly so they are preserved.
     const alternateStreetIds = [...segment.alternateStreetIds];
@@ -76,6 +78,24 @@ export function fixSegment(sdk: WmeSDK, issue: Issue, settings: Settings): FixOu
     ) {
       alternateStreetIds.push(segment.primaryStreetId);
     }
+
+    // Bilingual labels ("Unterer Quai / Quai du Bas"): add the other language(s) as
+    // alternates. The BILINGUAL check carries them; for a slash-in-primary fix the primary
+    // also changes, for a missing-alternate fix only the alternates grow.
+    if (issue.note?.altLabels) {
+      for (const name of issue.note.altLabels) {
+        const alt = findOrCreateStreet(sdk, name, cityId);
+        if (alt && alt.id !== street.id && !alternateStreetIds.includes(alt.id)) {
+          alternateStreetIds.push(alt.id);
+        }
+      }
+    }
+
+    // No empty edit: nothing changed (stale list, repeated group fix). The alternates array
+    // only ever grows here, so an unchanged length means no alternate was added.
+    const primaryChanged = segment.primaryStreetId !== street.id;
+    const altsChanged = alternateStreetIds.length !== segment.alternateStreetIds.length;
+    if (!primaryChanged && !altsChanged) return { segmentId, ok: true };
 
     sdk.DataModel.Segments.updateAddress({
       segmentId,

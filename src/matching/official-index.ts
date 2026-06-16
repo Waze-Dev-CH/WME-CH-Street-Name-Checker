@@ -97,6 +97,21 @@ interface FuzzyCandidate {
 
 const FUZZY_LENGTH_SLACK = 2;
 
+/**
+ * Other-language parts of a bilingual "A / B" official label, excluding the part
+ * chosen as the primary suggestion. Empty for monolingual labels. Used to offer the
+ * remaining language(s) as Waze alternate names on fix (e.g. primary
+ * "Rue de l'Hôpital", alternate "Spitalstrasse").
+ */
+export function otherLanguageLabels(label: string, primary: string): string[] {
+  if (!label.includes("/")) return [];
+  return label
+    .split("/")
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .filter((p) => k1(p) !== k1(primary));
+}
+
 /** Lookup structure over the official streets of one scanned area. */
 export class OfficialIndex {
   private byK0 = new Map<string, IndexedEntry[]>();

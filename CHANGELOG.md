@@ -3,6 +3,14 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.17.0] - 2026-06-16
+
+### Added
+- A new "BILINGUAL" check for bilingual streets, whose official name carries both languages separated by a slash (e.g. "Unterer Quai / Quai du Bas"). The canonical Waze naming is one language as the primary name and the other as an alternate. Two cases are flagged and fixed in one click: a segment whose primary name is the full "A / B" form is split (primary becomes the first official language, the other becomes an alternate), and a segment correctly named in one language but missing the other gets that other language added as an alternate — keeping the language you chose as the primary. As always, nothing is saved automatically. The category has its own colour and can be toggled with the status chips.
+
+### Changed
+- "WRONG_STREET" issues now carry a ⚠️ marker in the list and the edit-panel box, to stand out: the name is valid but a different official street runs under the segment.
+
 ## [1.16.0] - 2026-06-16
 
 ### Added

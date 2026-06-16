@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { damerauLevenshtein } from "../src/matching/distance";
-import { localityFromZipLabel, OfficialIndex } from "../src/matching/official-index";
+import {
+  localityFromZipLabel,
+  OfficialIndex,
+  otherLanguageLabels,
+} from "../src/matching/official-index";
 import { BIEL_STREETS, BERN_STREETS, LAUSANNE_STREETS, makeOfficial } from "./fixtures/swiss-names";
 
 describe("damerauLevenshtein", () => {
@@ -239,5 +243,26 @@ describe("locality scoping", () => {
 
   it("ignores locality when not provided", () => {
     expect(index.lookup("Rue de la Gare")?.inLocality).toBe(true);
+  });
+});
+
+describe("otherLanguageLabels", () => {
+  it("returns the other-language part of a bilingual label", () => {
+    expect(otherLanguageLabels("Bielstrasse / Rue de Bienne", "Rue de Bienne")).toEqual([
+      "Bielstrasse",
+    ]);
+    expect(otherLanguageLabels("Bielstrasse/Rue de Bienne", "Bielstrasse")).toEqual([
+      "Rue de Bienne",
+    ]);
+  });
+
+  it("excludes the primary case-insensitively", () => {
+    expect(otherLanguageLabels("Spitalstrasse / Rue de l'Hôpital", "rue de l'hôpital")).toEqual([
+      "Spitalstrasse",
+    ]);
+  });
+
+  it("returns nothing for a monolingual label", () => {
+    expect(otherLanguageLabels("Avenue de Florimont", "Avenue de Florimont")).toEqual([]);
   });
 });

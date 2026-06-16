@@ -2,7 +2,12 @@ import type { LineString } from "geojson";
 import type { Segment, SegmentAddress } from "wme-sdk-typings";
 import type { Settings } from "../settings";
 import { isRouteDesignation, k1 } from "./normalize";
-import { compareNameToCandidate, type IndexedEntry, type OfficialIndex } from "./official-index";
+import {
+  compareNameToCandidate,
+  type IndexedEntry,
+  type OfficialIndex,
+  otherLanguageLabels,
+} from "./official-index";
 import {
   distanceToEntryM,
   FAR_STREET_M,
@@ -16,6 +21,9 @@ export type IssueStatus =
   | "VARIANT"
   | "NEAR"
   | "WRONG_TYPE"
+  // Bilingual official label ("A / B"): primary should be one language, the other(s)
+  // as alternates. Flags a slash-in-primary name or a missing-language alternate.
+  | "BILINGUAL"
   | "WRONG_STREET"
   | "WRONG_CITY"
   | "NOT_FOUND"
@@ -38,6 +46,8 @@ export interface IssueNote {
   planned?: boolean;
   /** Full bilingual label when the suggestion is one side of an "A/B" label. */
   fullLabel?: string;
+  /** Other-language name(s) to add as alternates on fix (bilingual "A / B" labels). */
+  altLabels?: string[];
   /** zip_label of the locality where the name actually exists (WRONG_CITY). */
   existsIn?: string;
   /** Distance to the official axis of the CURRENT name (WRONG_STREET review aid). */
@@ -83,6 +93,16 @@ function noteFor(entry: IndexedEntry): IssueNote | null {
   }
   if (entry.isSlashPart) note.fullLabel = entry.street.label;
   return Object.keys(note).length > 0 ? note : null;
+}
+
+/** Set of normalized (k1) alternate-street names already on the segment. */
+function altPresenceSet(address: SegmentAddress): Set<string> {
+  const set = new Set<string>();
+  for (const alt of address.altStreets) {
+    const name = alt.street?.name?.trim();
+    if (name) set.add(k1(name));
+  }
+  return set;
 }
 
 export function evaluateSegment(
@@ -183,6 +203,30 @@ export function evaluateSegment(
         },
       };
     }
+    // Bilingual canonicalization: an official "A / B" label should be a single-language
+    // primary plus the other language(s) as alternates. A primary that IS the full slash
+    // form gets split (primary = first part, the rest as alternates) - this also catches a
+    // cosmetic match on the full label, where suggesting the slash form would be wrong.
+    const e = match.entry;
+    if (e.street.label.includes("/") && !e.isSlashPart) {
+      const parts = e.street.label
+        .split("/")
+        .map((p) => p.trim())
+        .filter(Boolean);
+      const present = altPresenceSet(address);
+      const altLabels = parts.slice(1).filter((p) => !present.has(k1(p)));
+      return {
+        kind: "issue",
+        issue: {
+          ...baseIssue,
+          status: "BILINGUAL",
+          suggestion: parts[0] ?? e.namePart,
+          note: { fullLabel: e.street.label, ...(altLabels.length > 0 ? { altLabels } : {}) },
+          fixable: true,
+        },
+      };
+    }
+
     if (match.level === "exact") {
       if (locality && !match.inLocality) {
         return {
@@ -195,6 +239,26 @@ export function evaluateSegment(
             fixable: false,
           },
         };
+      }
+      // Primary is one language of a bilingual label: flag any missing-language alternate,
+      // keeping the editor's chosen primary language as-is.
+      if (e.isSlashPart) {
+        const present = altPresenceSet(address);
+        const missing = otherLanguageLabels(e.street.label, e.namePart).filter(
+          (p) => !present.has(k1(p)),
+        );
+        if (missing.length > 0) {
+          return {
+            kind: "issue",
+            issue: {
+              ...baseIssue,
+              status: "BILINGUAL",
+              suggestion: e.namePart,
+              note: { fullLabel: e.street.label, altLabels: missing },
+              fixable: true,
+            },
+          };
+        }
       }
       return { kind: "ok" };
     }

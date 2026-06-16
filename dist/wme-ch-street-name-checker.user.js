@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Waze-Dev-CH
-// @version      1.16.0
+// @version      1.17.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -403,6 +403,7 @@
     legendVARIANT: "abbreviation, missing accent or article; official spelling suggested",
     legendNEAR: "probable typo; one close official name found",
     legendWRONG_TYPE: "different or missing way type (Chemin ↔ Route, X → Rue X); unique official name suggested",
+    legendBILINGUAL: "bilingual street: primary should be one language, the other as an alternate",
     legendWRONG_STREET: "valid name, but the official street underneath has another name",
     geometryMatching: "Geometry matching (official street under the segment)",
     geometryMatchingTitle: "Enables UNNAMED suggestions, wrong-street detection and disambiguation by distance",
@@ -496,6 +497,7 @@
     legendVARIANT: "abréviation, accent ou article manquant; orthographe officielle proposée",
     legendNEAR: "faute de frappe probable; un seul nom officiel proche",
     legendWRONG_TYPE: "type de voie différent ou manquant (Chemin ↔ Route, X → Rue X); nom officiel unique proposé",
+    legendBILINGUAL: "rue bilingue: le primaire doit être une seule langue, l'autre en alternatif",
     legendWRONG_STREET: "nom valide, mais la rue officielle dessous porte un autre nom",
     geometryMatching: "Matching géométrique (rue officielle sous le segment)",
     geometryMatchingTitle: "Active les suggestions UNNAMED, la détection de mauvaise rue et la désambiguïsation par distance",
@@ -589,6 +591,7 @@
     legendVARIANT: "Abkürzung, fehlender Akzent oder Artikel; amtliche Schreibweise vorgeschlagen",
     legendNEAR: "wahrscheinlicher Tippfehler; ein einziger naher amtlicher Name",
     legendWRONG_TYPE: "anderer oder fehlender Strassentyp (Weg ↔ Strasse, X → Strasse X); eindeutiger amtlicher Name vorgeschlagen",
+    legendBILINGUAL: "zweisprachige Strasse: primär eine Sprache, die andere als Alternative",
     legendWRONG_STREET: "gültiger Name, aber die amtliche Strasse darunter heisst anders",
     geometryMatching: "Geometrie-Matching (amtliche Strasse unter dem Segment)",
     geometryMatchingTitle: "Aktiviert UNNAMED-Vorschläge, Falsche-Strasse-Erkennung und Distanz-Disambiguierung",
@@ -682,6 +685,7 @@
     legendVARIANT: "abbreviazione, accento o articolo mancante; proposta la grafia ufficiale",
     legendNEAR: "probabile errore di battitura; un solo nome ufficiale vicino",
     legendWRONG_TYPE: "tipo di via diverso o mancante (Chemin ↔ Route, X → Via X); proposto il nome ufficiale unico",
+    legendBILINGUAL: "strada bilingue: il primario dev'essere una lingua, l'altra come alternativa",
     legendWRONG_STREET: "nome valido, ma la strada ufficiale sottostante ha un altro nome",
     geometryMatching: "Matching geometrico (strada ufficiale sotto il segmento)",
     geometryMatchingTitle: "Attiva i suggerimenti UNNAMED, il rilevamento di strada errata e la disambiguazione per distanza",
@@ -767,6 +771,7 @@
     VARIANT: { strokeColor: "#f7c948", strokeDashstyle: "solid" },
     NEAR: { strokeColor: "#ff8c00", strokeDashstyle: "solid" },
     WRONG_TYPE: { strokeColor: "#ff5722", strokeDashstyle: "dash" },
+    BILINGUAL: { strokeColor: "#2e7d32", strokeDashstyle: "dash" },
     WRONG_STREET: { strokeColor: "#b71c1c", strokeDashstyle: "solid" },
     WRONG_CITY: { strokeColor: "#ff5ca8", strokeDashstyle: "solid" },
     NOT_FOUND: { strokeColor: "#e02020", strokeDashstyle: "solid" },
@@ -852,6 +857,15 @@
     if (outcome.errorCode) return t(outcome.errorCode);
     return outcome.errorDetail ?? "?";
   }
+  function findOrCreateStreet(sdk2, streetName, cityId) {
+    const existing = sdk2.DataModel.Streets.getStreet({ streetName, cityId });
+    if (existing) return existing;
+    try {
+      return sdk2.DataModel.Streets.addStreet({ streetName, cityId });
+    } catch {
+      return sdk2.DataModel.Streets.getStreet({ streetName, cityId });
+    }
+  }
   function fixSegment(sdk2, issue, settings) {
     const segmentId = issue.segmentId;
     const fail = (errorCode) => ({ segmentId, ok: false, errorCode });
@@ -864,21 +878,24 @@
       const address = sdk2.DataModel.Segments.getAddress({ segmentId });
       const cityId = address.city?.id;
       if (cityId == null) return fail("errNoCity");
-      let street = sdk2.DataModel.Streets.getStreet({ streetName: issue.suggestion, cityId });
-      if (!street) {
-        try {
-          street = sdk2.DataModel.Streets.addStreet({ streetName: issue.suggestion, cityId });
-        } catch {
-          street = sdk2.DataModel.Streets.getStreet({ streetName: issue.suggestion, cityId });
-        }
-      }
+      const street = findOrCreateStreet(sdk2, issue.suggestion, cityId);
       if (!street) return fail("errStreetCreate");
-      if (segment.primaryStreetId === street.id) return { segmentId, ok: true };
       const alternateStreetIds = [...segment.alternateStreetIds];
       if (settings.keepOldNameAsAlt && issue.status !== "NEAR" && // never keep a typo as alternate
       segment.primaryStreetId != null && segment.primaryStreetId !== street.id && !alternateStreetIds.includes(segment.primaryStreetId)) {
         alternateStreetIds.push(segment.primaryStreetId);
       }
+      if (issue.note?.altLabels) {
+        for (const name of issue.note.altLabels) {
+          const alt = findOrCreateStreet(sdk2, name, cityId);
+          if (alt && alt.id !== street.id && !alternateStreetIds.includes(alt.id)) {
+            alternateStreetIds.push(alt.id);
+          }
+        }
+      }
+      const primaryChanged = segment.primaryStreetId !== street.id;
+      const altsChanged = alternateStreetIds.length !== segment.alternateStreetIds.length;
+      if (!primaryChanged && !altsChanged) return { segmentId, ok: true };
       sdk2.DataModel.Segments.updateAddress({
         segmentId,
         primaryStreetId: street.id,
@@ -1292,6 +1309,10 @@
     else map.set(key, [entry]);
   }
   var FUZZY_LENGTH_SLACK = 2;
+  function otherLanguageLabels(label, primary) {
+    if (!label.includes("/")) return [];
+    return label.split("/").map((p) => p.trim()).filter(Boolean).filter((p) => k1(p) !== k1(primary));
+  }
   var OfficialIndex = class {
     byK0 = /* @__PURE__ */ new Map();
     byK1 = /* @__PURE__ */ new Map();
@@ -1606,6 +1627,14 @@
     if (entry.isSlashPart) note.fullLabel = entry.street.label;
     return Object.keys(note).length > 0 ? note : null;
   }
+  function altPresenceSet(address) {
+    const set = /* @__PURE__ */ new Set();
+    for (const alt of address.altStreets) {
+      const name = alt.street?.name?.trim();
+      if (name) set.add(k1(name));
+    }
+    return set;
+  }
   function evaluateSegment(segment, address, index, settings, nearest = null, swissCountryId = null) {
     if (!settings.checkedRoadTypes.includes(segment.roadType)) return { kind: "skipped" };
     if (swissCountryId !== null && address.country && address.country.id !== swissCountryId) {
@@ -1661,6 +1690,22 @@
           }
         };
       }
+      const e = match.entry;
+      if (e.street.label.includes("/") && !e.isSlashPart) {
+        const parts = e.street.label.split("/").map((p) => p.trim()).filter(Boolean);
+        const present = altPresenceSet(address);
+        const altLabels = parts.slice(1).filter((p) => !present.has(k1(p)));
+        return {
+          kind: "issue",
+          issue: {
+            ...baseIssue,
+            status: "BILINGUAL",
+            suggestion: parts[0] ?? e.namePart,
+            note: { fullLabel: e.street.label, ...altLabels.length > 0 ? { altLabels } : {} },
+            fixable: true
+          }
+        };
+      }
       if (match.level === "exact") {
         if (locality && !match.inLocality) {
           return {
@@ -1673,6 +1718,24 @@
               fixable: false
             }
           };
+        }
+        if (e.isSlashPart) {
+          const present = altPresenceSet(address);
+          const missing = otherLanguageLabels(e.street.label, e.namePart).filter(
+            (p) => !present.has(k1(p))
+          );
+          if (missing.length > 0) {
+            return {
+              kind: "issue",
+              issue: {
+                ...baseIssue,
+                status: "BILINGUAL",
+                suggestion: e.namePart,
+                note: { fullLabel: e.street.label, altLabels: missing },
+                fixable: true
+              }
+            };
+          }
         }
         return { kind: "ok" };
       }
@@ -2142,6 +2205,7 @@
   var ALL_STATUSES = [
     "COSMETIC",
     "VARIANT",
+    "BILINGUAL",
     "NEAR",
     "WRONG_TYPE",
     "WRONG_STREET",
@@ -2549,6 +2613,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     VARIANT: "legendVARIANT",
     NEAR: "legendNEAR",
     WRONG_TYPE: "legendWRONG_TYPE",
+    BILINGUAL: "legendBILINGUAL",
     WRONG_STREET: "legendWRONG_STREET",
     WRONG_CITY: "legendWRONG_CITY",
     NOT_FOUND: "legendNOT_FOUND",
@@ -2594,6 +2659,9 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     }
     return false;
   }
+  function statusEmoji(status) {
+    return status === "WRONG_STREET" ? "⚠️" : "";
+  }
   function formatNote(note) {
     if (!note) return "";
     const parts = [];
@@ -2610,18 +2678,19 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
   var SEVERITY_ORDER = {
     COSMETIC: 0,
     VARIANT: 1,
-    NEAR: 2,
-    WRONG_TYPE: 3,
-    WRONG_STREET: 4,
-    WRONG_CITY: 5,
-    NOT_FOUND: 6,
-    UNNAMED: 7,
-    UNDER_LOCK: 8,
-    MICRO_SEGMENT: 9,
-    LOOP: 10,
-    NARROW_MISUSE: 11,
-    OVER_LOCK: 12,
-    UNNAMED_NO_MATCH: 13
+    BILINGUAL: 2,
+    NEAR: 3,
+    WRONG_TYPE: 4,
+    WRONG_STREET: 5,
+    WRONG_CITY: 6,
+    NOT_FOUND: 7,
+    UNNAMED: 8,
+    UNDER_LOCK: 9,
+    MICRO_SEGMENT: 10,
+    LOOP: 11,
+    NARROW_MISUSE: 12,
+    OVER_LOCK: 13,
+    UNNAMED_NO_MATCH: 14
   };
   function groupIssues(issues) {
     const groups = /* @__PURE__ */ new Map();
@@ -2720,7 +2789,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       brand.append(
         el("span", "chk-brand-icon", "🇨🇭"),
         el("span", "chk-brand-title", "CH Names"),
-        el("span", "chk-brand-version", `v${"1.16.0"}`)
+        el("span", "chk-brand-version", `v${"1.17.0"}`)
       );
       const toolbar = el("div", "chk-toolbar");
       const rescanBtn = el("button", "chk-btn", t("rescan"));
@@ -2936,6 +3005,8 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       badge.title = group.status;
       const noteText = formatNote(group.note);
       const names = el("span", "chk-group-names");
+      const emoji = statusEmoji(group.status);
+      if (emoji) names.appendChild(el("span", "", `${emoji} `));
       names.appendChild(el("span", "", group.currentName ?? t("unnamed")));
       if (group.suggestion && group.suggestion !== group.currentName) {
         names.appendChild(el("span", "chk-arrow", "  →  "));
@@ -3361,7 +3432,8 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
         return;
       }
       dot.style.background = STATUS_STYLES[issue.status].strokeColor;
-      statusText.textContent = issue.status;
+      const emoji = statusEmoji(issue.status);
+      statusText.textContent = emoji ? `${emoji} ${issue.status}` : issue.status;
       const geoLink = document.createElement("a");
       geoLink.textContent = "↗";
       geoLink.className = "chk-geolink";
@@ -3501,7 +3573,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.16.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.17.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

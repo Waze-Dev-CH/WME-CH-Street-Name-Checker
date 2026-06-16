@@ -29,6 +29,7 @@ export const LEGEND_KEYS: Record<IssueStatus, StringKey> = {
   VARIANT: "legendVARIANT",
   NEAR: "legendNEAR",
   WRONG_TYPE: "legendWRONG_TYPE",
+  BILINGUAL: "legendBILINGUAL",
   WRONG_STREET: "legendWRONG_STREET",
   WRONG_CITY: "legendWRONG_CITY",
   NOT_FOUND: "legendNOT_FOUND",
@@ -87,6 +88,12 @@ function wmeThemeIsDark(start: HTMLElement): boolean {
   return false;
 }
 
+/** Leading emoji for a status, or "" when none. WRONG_STREET is flagged: a different
+ *  official street runs under a validly-named segment — easy to miss in the list. */
+export function statusEmoji(status: IssueStatus): string {
+  return status === "WRONG_STREET" ? "⚠️" : "";
+}
+
 export function formatNote(note: IssueNote | null): string {
   if (!note) return "";
   const parts: string[] = [];
@@ -116,18 +123,19 @@ export interface IssueGroup {
 const SEVERITY_ORDER: Record<IssueStatus, number> = {
   COSMETIC: 0,
   VARIANT: 1,
-  NEAR: 2,
-  WRONG_TYPE: 3,
-  WRONG_STREET: 4,
-  WRONG_CITY: 5,
-  NOT_FOUND: 6,
-  UNNAMED: 7,
-  UNDER_LOCK: 8,
-  MICRO_SEGMENT: 9,
-  LOOP: 10,
-  NARROW_MISUSE: 11,
-  OVER_LOCK: 12,
-  UNNAMED_NO_MATCH: 13,
+  BILINGUAL: 2,
+  NEAR: 3,
+  WRONG_TYPE: 4,
+  WRONG_STREET: 5,
+  WRONG_CITY: 6,
+  NOT_FOUND: 7,
+  UNNAMED: 8,
+  UNDER_LOCK: 9,
+  MICRO_SEGMENT: 10,
+  LOOP: 11,
+  NARROW_MISUSE: 12,
+  OVER_LOCK: 13,
+  UNNAMED_NO_MATCH: 14,
 };
 
 export function groupIssues(issues: Iterable<Issue>): IssueGroup[] {
@@ -494,6 +502,8 @@ export class TabUI {
 
     const noteText = formatNote(group.note);
     const names = el("span", "chk-group-names");
+    const emoji = statusEmoji(group.status);
+    if (emoji) names.appendChild(el("span", "", `${emoji} `));
     names.appendChild(el("span", "", group.currentName ?? t("unnamed")));
     if (group.suggestion && group.suggestion !== group.currentName) {
       names.appendChild(el("span", "chk-arrow", "  →  "));

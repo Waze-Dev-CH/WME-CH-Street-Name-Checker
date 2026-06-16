@@ -14,7 +14,7 @@ import { STATUS_STYLES } from "../map-layer";
 import type { Issue } from "../matching/evaluate";
 import type { Scanner } from "../scan";
 import type { SettingsStore } from "../settings";
-import { formatNote, LEGEND_KEYS, STATE_KEYS } from "./tab";
+import { formatNote, LEGEND_KEYS, STATE_KEYS, statusEmoji } from "./tab";
 import { cantonMapLink } from "./canton-link";
 import { mapGeoAdminUrlForGeometry } from "../geoadmin/links";
 import { getLocale, t } from "../i18n";
@@ -131,7 +131,8 @@ export class EditPanelBox {
     }
 
     dot.style.background = STATUS_STYLES[issue.status].strokeColor;
-    statusText.textContent = issue.status;
+    const emoji = statusEmoji(issue.status);
+    statusText.textContent = emoji ? `${emoji} ${issue.status}` : issue.status;
     const geoLink = document.createElement("a");
     geoLink.textContent = "↗";
     geoLink.className = "chk-geolink";

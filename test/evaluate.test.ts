@@ -5,7 +5,7 @@ import { evaluateSegment } from "../src/matching/evaluate";
 import { nearestOfficial, SpatialIndex } from "../src/matching/spatial";
 import { OfficialIndex } from "../src/matching/official-index";
 import { DEFAULT_SETTINGS, type Settings } from "../src/settings";
-import { LAUSANNE_STREETS, makeOfficial } from "./fixtures/swiss-names";
+import { BIEL_STREETS, LAUSANNE_STREETS, makeOfficial } from "./fixtures/swiss-names";
 
 const GEOMETRY: LineString = {
   type: "LineString",
@@ -343,5 +343,52 @@ describe("geometry matching", () => {
     );
     expect(v.kind).toBe("issue");
     if (v.kind === "issue") expect(v.issue.status).toBe("NOT_FOUND");
+  });
+});
+
+describe("BILINGUAL status", () => {
+  const bielIndex = new OfficialIndex(BIEL_STREETS);
+
+  it("splits a slash-in-primary name into first-language primary + other alternate", () => {
+    const v = evaluateSegment(
+      makeSegment(),
+      makeAddress("Bielstrasse/Rue de Bienne", [], "Biel/Bienne"),
+      bielIndex,
+      settings,
+      null,
+    );
+    expect(v.kind).toBe("issue");
+    if (v.kind === "issue") {
+      expect(v.issue.status).toBe("BILINGUAL");
+      expect(v.issue.suggestion).toBe("Bielstrasse");
+      expect(v.issue.note?.altLabels).toEqual(["Rue de Bienne"]);
+    }
+  });
+
+  it("flags a single-language primary missing the other-language alternate", () => {
+    const v = evaluateSegment(
+      makeSegment(),
+      makeAddress("Rue de Bienne", [], "Biel/Bienne"),
+      bielIndex,
+      settings,
+      null,
+    );
+    expect(v.kind).toBe("issue");
+    if (v.kind === "issue") {
+      expect(v.issue.status).toBe("BILINGUAL");
+      expect(v.issue.suggestion).toBe("Rue de Bienne"); // primary language kept
+      expect(v.issue.note?.altLabels).toEqual(["Bielstrasse"]);
+    }
+  });
+
+  it("is OK when the primary is one language and the other is already an alternate", () => {
+    const v = evaluateSegment(
+      makeSegment(),
+      makeAddress("Rue de Bienne", ["Bielstrasse"], "Biel/Bienne"),
+      bielIndex,
+      settings,
+      null,
+    );
+    expect(v.kind).toBe("ok");
   });
 });

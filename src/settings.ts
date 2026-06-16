@@ -36,6 +36,7 @@ export type CityScoping = "off" | "warn" | "strict";
 export const ALL_STATUSES: IssueStatus[] = [
   "COSMETIC",
   "VARIANT",
+  "BILINGUAL",
   "NEAR",
   "WRONG_TYPE",
   "WRONG_STREET",
