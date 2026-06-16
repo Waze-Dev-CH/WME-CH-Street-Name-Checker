@@ -26,7 +26,7 @@ Compare les noms de rues des segments visibles avec le **répertoire officiel de
 - Correction 1-clic par segment ou par groupe (cap 50, confirmation au-delà de 20). **Rien n'est sauvegardé automatiquement**: les modifications entrent dans la pile d'édition WME, tu relis et sauves toi-même (Ctrl+S, undo natif).
 - Matching géométrique (désactivable): les axes officiels sont appariés spatialement aux segments - suggestions 1-clic pour les segments sans nom, détection de la mauvaise rue, désambiguïsation par distance. Anti-faux-positifs: filtre d'orientation (les transversales ne concourent pas), couverture minimale du segment, abstention en cas de rues quasi équidistantes.
 - Routes cantonales/nationales hors localité: un nom introuvable sur une route principale est accepté si un axe officiel du même nom existe à moins de 3 km (prolongement du nom de la commune voisine, ex. Route de Berne entre Payerne et Corcelles). Les désignations numérotées (A9, E62, A9 - E62) sont acceptées sur les types autoroutiers.
-- Communes bilingues (Biel/Bienne…): les libellés officiels `A/B` sont acceptés en entier et pour chaque partie; un nom alternatif Waze qui correspond compte comme OK (réglable).
+- Communes bilingues (Biel/Bienne…): le nom doit être **une langue en primaire et l'autre en alternatif** (statut `BILINGUAL`). Un primaire au format `A / B` est signalé et séparé en 1 clic (primaire = 1re langue officielle, l'autre en alternatif); une langue manquante en alternatif est ajoutée, en conservant la langue primaire choisie. Un nom alternatif Waze qui correspond compte comme OK (réglable).
 - Contrôles des règles d'édition de Suisse romande (sans donnée externe, désactivables): micro-segments, boucles à 1-2 segments, mauvais usage du type Rue étroite, niveau de verrouillage hors standard suisse (trop bas/trop haut selon le type de route). Statuts informatifs, sans correction automatique.
 - Filtre "seulement les segments modifiables" (désactivé par défaut): masque partout (liste, carte, compteurs) les segments verrouillés au-dessus de ton niveau d'éditeur.
 - Réglages persistants: types de routes ET types d'erreurs vérifiés (case par statut), scoping par localité (off/warn/strict), labels carte, zoom minimal, conservation de l'ancien nom en alternatif, langue.
@@ -37,9 +37,10 @@ Compare les noms de rues des segments visibles avec le **répertoire officiel de
 |---|---|---|
 | `COSMETIC` | Différence typographique (apostrophe, casse, espaces) | jaune pointillé |
 | `VARIANT` | Abréviation, accent ou article manquant (Av. → Avenue, Chemin de Montaz → Chemin de la Montaz) | jaune |
+| `BILINGUAL` | Rue bilingue: le primaire doit être une seule langue, l'autre en alternatif. Sépare un primaire au format `A / B` ou ajoute la langue manquante en alternatif | vert pointillé |
 | `NEAR` | Probable faute de frappe, suggestion unique | orange |
 | `WRONG_TYPE` | Type de voie différent ou manquant (Chemin → Route, La Palaz A → Zone Industrielle La Palaz A), radical unique dans le secteur | orange foncé pointillé |
-| `WRONG_STREET` | Nom valide, mais la rue officielle sous le segment porte un autre nom | rouge foncé |
+| `WRONG_STREET` | Nom valide, mais la rue officielle sous le segment porte un autre nom (marqué ⚠️) | rouge foncé |
 | `WRONG_CITY` | Le nom existe, mais dans une autre localité (mode scoping) | rose |
 | `NOT_FOUND` | Introuvable dans le répertoire officiel | rouge |
 | `UNNAMED` | Segment à nommer: type vérifié sans nom; la rue officielle dessous est proposée en 1 clic (ou tout segment sans nom si le matching géométrique est désactivé) | violet pointillé |
@@ -75,7 +76,7 @@ Vergleicht die Strassennamen der sichtbaren Segmente mit dem **amtlichen Strasse
 - 1-Klick-Korrektur pro Segment oder Gruppe (max. 50, Bestätigung ab 20). **Nichts wird automatisch gespeichert**: Änderungen landen im WME-Bearbeitungsstapel - prüfen und selbst speichern (Ctrl+S, natives Undo).
 - Geometrie-Matching (abschaltbar): amtliche Strassenachsen werden räumlich den Segmenten zugeordnet - 1-Klick-Vorschläge für unbenannte Segmente, Falsche-Strasse-Erkennung, Distanz-Disambiguierung. Gegen Fehlalarme: Richtungsfilter (Querstrassen konkurrieren nie), Mindestabdeckung des Segments, Enthaltung bei fast gleich nahen Strassen.
 - Ausserortsstrecken von Kantons-/Nationalstrassen: ein unauffindbarer Name auf einer Hauptstrasse wird akzeptiert, wenn eine gleichnamige amtliche Achse innerhalb von 3 km existiert (Fortsetzung aus der Nachbargemeinde). Nummerierte Bezeichnungen (A9, E62, A9 - E62) werden auf Autobahn-Typen akzeptiert.
-- Zweisprachige Gemeinden (Biel/Bienne…): amtliche `A/B`-Bezeichnungen werden als Ganzes und je Teil akzeptiert; ein passender Alternativname zählt als OK (einstellbar).
+- Zweisprachige Gemeinden (Biel/Bienne…): der Name soll **eine Sprache als Primärname und die andere als Alternative** haben (Status `BILINGUAL`). Ein Primärname im Format `A / B` wird gemeldet und mit 1 Klick aufgeteilt (primär = erste amtliche Sprache, die andere als Alternative); eine fehlende Sprache wird als Alternative ergänzt, wobei die gewählte Primärsprache erhalten bleibt. Ein passender Alternativname zählt als OK (einstellbar).
 - Schweizer Regelprüfungen (ohne externe Daten, abschaltbar): Mikrosegmente, Schleifen aus 1-2 Segmenten, falsch verwendete enge Strassen, Sperrstufe ausserhalb des Schweizer Standards (zu niedrig/zu hoch je Strassentyp). Nur informativ, keine automatische Korrektur.
 - Filter "nur bearbeitbare Segmente" (standardmässig aus): blendet überall (Liste, Karte, Zähler) Segmente aus, die über dem eigenen Editor-Rang gesperrt sind.
 - Persistente Einstellungen: geprüfte Strassentypen UND Fehlertypen (Checkbox je Status), Ortschafts-Scoping, Kartenbeschriftung, Mindestzoom, alten Namen als Alternative behalten, Sprache.
@@ -86,9 +87,10 @@ Vergleicht die Strassennamen der sichtbaren Segmente mit dem **amtlichen Strasse
 |---|---|---|
 | `COSMETIC` | Nur Typografie (Apostroph, Gross-/Kleinschreibung, Leerzeichen) | gelb gestrichelt |
 | `VARIANT` | Abkürzung, fehlender Akzent oder Artikel (Bahnhofstr. → Bahnhofstrasse) | gelb |
+| `BILINGUAL` | Zweisprachige Strasse: primär eine Sprache, die andere als Alternative. Teilt einen Namen im Format `A / B` auf oder ergänzt die fehlende Sprache als Alternative | grün gestrichelt |
 | `NEAR` | Wahrscheinlicher Tippfehler, eindeutiger Vorschlag | orange |
 | `WRONG_TYPE` | Anderer oder fehlender Strassentyp (Bahnhofweg → Bahnhofstrasse, X → Strasse X), eindeutiger Namensstamm in der Umgebung | dunkelorange gestrichelt |
-| `WRONG_STREET` | Gültiger Name, aber die amtliche Strasse unter dem Segment heisst anders | dunkelrot |
+| `WRONG_STREET` | Gültiger Name, aber die amtliche Strasse unter dem Segment heisst anders (mit ⚠️ markiert) | dunkelrot |
 | `WRONG_CITY` | Name existiert, aber in anderer Ortschaft (Scoping-Modus) | rosa |
 | `NOT_FOUND` | Nicht im amtlichen Verzeichnis | rot |
 | `UNNAMED` | Zu benennendes Segment: geprüfter Typ ohne Namen; die amtliche Strasse darunter wird mit 1 Klick vorgeschlagen (oder jedes unbenannte Segment, wenn Geometrie-Matching aus ist) | violett gestrichelt |
@@ -124,7 +126,7 @@ Confronta i nomi delle strade dei segmenti visibili con il **repertorio ufficial
 - Correzione in 1 clic per segmento o per gruppo (max 50, conferma oltre 20). **Nulla viene salvato automaticamente**: le modifiche entrano nello stack di WME - rivedi e salva tu stesso (Ctrl+S, undo nativo).
 - Matching geometrico (disattivabile): gli assi ufficiali sono abbinati spazialmente ai segmenti - suggerimenti in 1 clic per i segmenti senza nome, rilevamento della strada errata, disambiguazione per distanza. Contro i falsi positivi: filtro di orientamento (le trasversali non competono), copertura minima del segmento, astensione con strade quasi equidistanti.
 - Strade cantonali/nazionali fuori località: un nome introvabile su una strada principale è accettato se un asse ufficiale omonimo esiste entro 3 km (continuazione dal comune vicino). Le designazioni numerate (A9, E62, A9 - E62) sono accettate sui tipi autostradali.
-- Comuni bilingui (Biel/Bienne…): le denominazioni ufficiali `A/B` sono accettate per intero e per ciascuna parte; un nome alternativo corrispondente conta come OK (regolabile).
+- Comuni bilingui (Biel/Bienne…): il nome deve avere **una lingua come primario e l'altra come alternativo** (stato `BILINGUAL`). Un primario nel formato `A / B` viene segnalato e separato in 1 clic (primario = prima lingua ufficiale, l'altra come alternativo); una lingua mancante viene aggiunta come alternativo, mantenendo la lingua primaria scelta. Un nome alternativo corrispondente conta come OK (regolabile).
 - Controlli delle regole svizzere (senza dati esterni, disattivabili): micro-segmenti, anelli di 1-2 segmenti, uso scorretto del tipo Strada stretta, livello di blocco fuori dallo standard svizzero (troppo basso/troppo alto per il tipo di strada). Solo informativi, nessuna correzione automatica.
 - Filtro "solo i segmenti modificabili" (disattivato per impostazione predefinita): nasconde ovunque (elenco, mappa, contatori) i segmenti bloccati oltre il proprio livello di editor.
 - Impostazioni persistenti: tipi di strada E tipi di errore verificati (casella per stato), scoping per località, etichette sulla mappa, zoom minimo, mantenere il vecchio nome come alternativo, lingua.
@@ -135,9 +137,10 @@ Confronta i nomi delle strade dei segmenti visibili con il **repertorio ufficial
 |---|---|---|
 | `COSMETIC` | Solo tipografia (apostrofo, maiuscole, spazi) | giallo tratteggiato |
 | `VARIANT` | Abbreviazione, accento o articolo mancante | giallo |
+| `BILINGUAL` | Strada bilingue: il primario dev'essere una sola lingua, l'altra come alternativa. Separa un primario nel formato `A / B` o aggiunge la lingua mancante come alternativo | verde tratteggiato |
 | `NEAR` | Probabile errore di battitura, proposta unica | arancione |
 | `WRONG_TYPE` | Tipo di via diverso o mancante (Chemin → Route, X → Via X), radice unica nella zona | arancione scuro tratteggiato |
-| `WRONG_STREET` | Nome valido, ma la strada ufficiale sotto il segmento ha un altro nome | rosso scuro |
+| `WRONG_STREET` | Nome valido, ma la strada ufficiale sotto il segmento ha un altro nome (segnalato ⚠️) | rosso scuro |
 | `WRONG_CITY` | Il nome esiste, ma in un'altra località (scoping) | rosa |
 | `NOT_FOUND` | Assente dal repertorio ufficiale | rosso |
 | `UNNAMED` | Segmento da nominare: tipo verificato senza nome; la strada ufficiale sottostante è proposta in 1 clic (o qualsiasi segmento senza nome se il matching geometrico è disattivato) | viola tratteggiato |
@@ -173,7 +176,7 @@ Compares the street names of visible segments with the Swiss federal **official 
 - One-click fix per segment or per group (capped at 50, confirmation above 20). **Nothing is ever auto-saved**: edits go into the WME edit stack - review and save yourself (Ctrl+S, native undo).
 - Geometry matching (toggleable): official street axes are matched spatially against segments - one-click suggestions for unnamed segments, wrong-street detection, distance disambiguation. False-positive guards: bearing filter (cross streets never compete), minimum segment coverage, abstention when two streets are nearly equidistant.
 - Out-of-locality cantonal/national roads: a NOT_FOUND name on a main road is accepted when a same-named official axis exists within 3 km (continuation from the neighboring commune, e.g. Route de Berne between Payerne and Corcelles). Numbered designations (A9, E62, A9 - E62) are accepted on highway types.
-- Bilingual communes (Biel/Bienne…): official `A/B` labels accepted as a whole and per part; a matching alternate name counts as OK (configurable).
+- Bilingual communes (Biel/Bienne…): the name should be **one language as the primary and the other as an alternate** (status `BILINGUAL`). A primary in the `A / B` form is flagged and split in one click (primary = the first official language, the other as an alternate); a missing language is added as an alternate while keeping the primary language you chose. A matching alternate name counts as OK (configurable).
 - Swiss guideline checks (no external data, toggleable): micro-segments, 1-2 segment loops, Narrow Street misuse, lock level outside the Swiss standard (too low/too high for the road type). Informational only, no automatic fix.
 - "Only segments I can edit" filter (off by default): hides everywhere (list, map, counters) the segments locked above your editor rank.
 - Persistent settings: checked road types AND issue types (checkbox per status), city scoping, map labels, minimum zoom, keep old name as alternate, language.
@@ -184,9 +187,10 @@ Compares the street names of visible segments with the Swiss federal **official 
 |---|---|---|
 | `COSMETIC` | Typography only (apostrophe, case, spacing) | dashed yellow |
 | `VARIANT` | Abbreviation, missing accent or article | yellow |
+| `BILINGUAL` | Bilingual street: primary should be one language, the other as an alternate. Splits an `A / B` primary or adds the missing language as an alternate | dashed green |
 | `NEAR` | Probable typo, unique suggestion | orange |
 | `WRONG_TYPE` | Different or missing way type (Chemin → Route, La Palaz A → Zone Industrielle La Palaz A), unique stem in the area | dashed dark orange |
-| `WRONG_STREET` | Valid name, but the official street under the segment has another name | dark red |
+| `WRONG_STREET` | Valid name, but the official street under the segment has another name (flagged ⚠️) | dark red |
 | `WRONG_CITY` | Name exists, but in another locality (scoping mode) | pink |
 | `NOT_FOUND` | Not in the official register | red |
 | `UNNAMED` | Segment to be named: checked road type without a name; the official street underneath is suggested in one click (or any unnamed segment when geometry matching is off) | dashed violet |
