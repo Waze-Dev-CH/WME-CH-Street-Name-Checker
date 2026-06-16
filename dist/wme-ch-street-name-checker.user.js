@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME CH Street Name Checker
 // @namespace    https://github.com/Waze-Dev-CH
-// @version      1.15.1
+// @version      1.16.0
 // @description  Validates Waze street names against the official Swiss street register (répertoire officiel des rues, swisstopo / geo.admin.ch)
 // @author       Yann Rapenne
 // @license      MIT
@@ -134,7 +134,7 @@
         method: "GET",
         url,
         responseType: "json",
-        onload: (r) => r.status >= 200 && r.status < 300 ? resolve(r.response) : reject(new Error(`geo.admin.ch HTTP ${r.status}`)),
+        onload: (r2) => r2.status >= 200 && r2.status < 300 ? resolve(r2.response) : reject(new Error(`geo.admin.ch HTTP ${r2.status}`)),
         onerror: () => reject(new Error("GM_xmlhttpRequest network error")),
         ontimeout: () => reject(new Error("GM_xmlhttpRequest timeout"))
       });
@@ -202,7 +202,7 @@
       sr: "4326"
     });
     const data = await httpGetJson(`${FIND_URL}?${params.toString()}`, signal);
-    const lines = (data.results ?? []).flatMap((r) => extractLines(r.geometry) ?? []);
+    const lines = (data.results ?? []).flatMap((r2) => extractLines(r2.geometry) ?? []);
     return lines.length > 0 ? lines : null;
   }
   async function fetchOfficialStreets(bbox, signal, limiter = rateLimiter) {
@@ -226,8 +226,8 @@
       });
       const data = await httpGetJson(`${BASE_URL}?${params.toString()}`, signal);
       const results = data.results ?? [];
-      for (const r of results) {
-        const street = parseAttributes(r.properties ?? r.attributes, r.geometry);
+      for (const r2 of results) {
+        const street = parseAttributes(r2.properties ?? r2.attributes, r2.geometry);
         if (street) out.push(street);
       }
       if (results.length < PAGE_SIZE) return out;
@@ -380,6 +380,7 @@
     nextIssueTitle: "Select the next mismatching segment",
     locateTitle: "Center the map on the segment",
     geoAdminLinkTitle: "Open this spot on map.geo.admin.ch (official register layer)",
+    cantonMapLinkTitle: "Open this spot on the {canton} cantonal map",
     filterChipTitle: "Filter the list by this status",
     unnamed: "(unnamed)",
     noteUnofficial: "unofficial",
@@ -472,6 +473,7 @@
     nextIssueTitle: "Sélectionner le segment en écart suivant",
     locateTitle: "Centrer la carte sur le segment",
     geoAdminLinkTitle: "Ouvrir cet endroit sur map.geo.admin.ch (couche du répertoire officiel)",
+    cantonMapLinkTitle: "Ouvrir cet endroit sur la carte cantonale ({canton})",
     filterChipTitle: "Filtrer la liste sur ce statut",
     unnamed: "(sans nom)",
     noteUnofficial: "non officiel",
@@ -564,6 +566,7 @@
     nextIssueTitle: "Nächstes abweichendes Segment auswählen",
     locateTitle: "Karte auf das Segment zentrieren",
     geoAdminLinkTitle: "Diese Stelle auf map.geo.admin.ch öffnen (amtliche Verzeichnis-Ebene)",
+    cantonMapLinkTitle: "Diese Stelle auf der Kantonskarte öffnen ({canton})",
     filterChipTitle: "Liste nach diesem Status filtern",
     unnamed: "(unbenannt)",
     noteUnofficial: "inoffiziell",
@@ -656,6 +659,7 @@
     nextIssueTitle: "Seleziona il prossimo segmento con differenza",
     locateTitle: "Centra la mappa sul segmento",
     geoAdminLinkTitle: "Apri questo punto su map.geo.admin.ch (livello del repertorio ufficiale)",
+    cantonMapLinkTitle: "Apri questo punto sulla mappa cantonale ({canton})",
     filterChipTitle: "Filtra l'elenco per questo stato",
     unnamed: "(senza nome)",
     noteUnofficial: "non ufficiale",
@@ -976,6 +980,7 @@
       note: null,
       cityId: address?.city?.id ?? null,
       cityName: address?.city?.name ?? null,
+      cantonName: address?.state?.name ?? null,
       roadType: segment.roadType,
       length: segment.length,
       geometry: segment.geometry,
@@ -1085,7 +1090,7 @@
     { abbrev: "pt", expansions: ["petit"] },
     { abbrev: "pte", expansions: ["petite"] }
   ];
-  var ABBREV_MAP = new Map(ABBREVIATIONS.map((r) => [r.abbrev, r]));
+  var ABBREV_MAP = new Map(ABBREVIATIONS.map((r2) => [r2.abbrev, r2]));
   var MAX_VARIANTS = 8;
   var ARTICLES = /* @__PURE__ */ new Set([
     "de",
@@ -1612,6 +1617,7 @@
       currentName,
       cityId: address.city?.id ?? null,
       cityName: address.city?.name ?? null,
+      cantonName: address.state?.name ?? null,
       roadType: segment.roadType,
       length: segment.length,
       geometry: segment.geometry
@@ -2162,7 +2168,7 @@
     enabled: true,
     autoScan: true,
     minZoom: 15,
-    checkedRoadTypes: ROAD_TYPE_OPTIONS.filter((r) => r.defaultChecked).map((r) => r.id),
+    checkedRoadTypes: ROAD_TYPE_OPTIONS.filter((r2) => r2.defaultChecked).map((r2) => r2.id),
     // UNNAMED_NO_MATCH is legitimately-unnamed noise: present but hidden by default.
     enabledStatuses: ALL_STATUSES.filter((s) => s !== "UNNAMED_NO_MATCH"),
     altNameCountsAsOk: true,
@@ -2242,6 +2248,150 @@
     const points = samplePoints(geometry);
     const mid = points[Math.floor(points.length / 2)] ?? [0, 0];
     return mapGeoAdminUrl(mid[0], mid[1], locale);
+  }
+
+  // src/canton-map.ts
+  var NAME_VARIANTS = {
+    zh: ["zurich"],
+    be: ["bern", "berne", "berna"],
+    lu: ["luzern", "lucerne", "lucerna"],
+    ur: ["uri"],
+    sz: ["schwyz", "svitto"],
+    ow: ["obwalden", "obwald", "obvaldo"],
+    nw: ["nidwalden", "nidwald", "nidvaldo"],
+    gl: ["glarus", "glaris", "glarona"],
+    zg: ["zug", "zoug", "zugo"],
+    fr: ["fribourg", "freiburg", "friburgo"],
+    so: ["solothurn", "soleure", "soletta"],
+    bs: ["basel-stadt", "basel stadt", "bale-ville", "bale ville", "basilea citta"],
+    bl: ["basel-landschaft", "basel landschaft", "bale-campagne", "bale campagne", "basilea campagna"],
+    sh: ["schaffhausen", "schaffhouse", "sciaffusa"],
+    ar: ["appenzell ausserrhoden", "appenzell rhodes-exterieures", "appenzello esterno"],
+    ai: ["appenzell innerrhoden", "appenzell rhodes-interieures", "appenzello interno"],
+    sg: ["st. gallen", "st gallen", "sankt gallen", "saint-gall", "saint gall", "san gallo"],
+    gr: ["graubunden", "grisons", "grigioni", "grischun"],
+    ag: ["aargau", "argovie", "argovia"],
+    tg: ["thurgau", "thurgovie", "turgovia"],
+    ti: ["ticino", "tessin"],
+    vd: ["vaud", "waadt"],
+    vs: ["valais", "wallis", "vallese"],
+    ne: ["neuchatel", "neuenburg"],
+    ge: ["geneve", "geneva", "genf", "ginevra"],
+    ju: ["jura", "giura"]
+  };
+  var NAME_TO_CODE = /* @__PURE__ */ new Map();
+  for (const [code, names] of Object.entries(NAME_VARIANTS)) {
+    for (const name of names) NAME_TO_CODE.set(name, code);
+  }
+  function normalizeName(name) {
+    return foldAccents(name).toLowerCase().trim().replace(/\s+/g, " ");
+  }
+  function cantonCodeFromName(name) {
+    if (!name) return null;
+    const direct = NAME_TO_CODE.get(normalizeName(name));
+    if (direct) return direct;
+    for (const part of name.split("/")) {
+      const code = NAME_TO_CODE.get(normalizeName(part));
+      if (code) return code;
+    }
+    return null;
+  }
+  var MAP_URL = {
+    // VD — custom ArcGIS; permalink.js builds center,scale,wkid. The non-www host
+    // 302-redirects and drops the query, so target www directly.
+    vd: (e, n) => `https://www.geo.vd.ch/?center=${r(e)},${r(n)}&scale=10000&wkid=2056`,
+    // GeoMapFish (map_x/map_y/map_zoom + crosshair) — recenter confirmed live.
+    // JU (geo.jura.ch) and GR (map.geo.gr.ch) are intentionally absent: JU's portal
+    // returns errors / closes the connection, and GR forcibly redirects to its parcel
+    // theme and resets the zoom to the whole canton — neither recenters usably.
+    ne: (e, n) => geomapfish("https://sitn.ne.ch/", e, n),
+    sz: (e, n) => geomapfish("https://map.geo.sz.ch/", e, n),
+    ti: (e, n) => geomapfish("https://map.geo.ti.ch/", e, n),
+    bl: (e, n) => geomapfish("https://geoview.bl.ch/", e, n),
+    // GE — Topomat/ESRI viewer (center,scale found in JS).
+    ge: (e, n) => centerScale("https://map.sitg.ge.ch/app/", e, n),
+    // Canton-specific schemes.
+    be: (e, n) => `https://www.topo.apps.be.ch/pub/map/?center=${r(e)},${r(n)}&scale=10000&addcrosshair=true`,
+    so: (e, n) => `https://geo.so.ch/map?c=${r(e)},${r(n)}&s=10000&hc=1`
+  };
+  var r = (v) => Math.round(v);
+  function geomapfish(base, e, n) {
+    return `${base}?map_x=${r(e)}&map_y=${r(n)}&map_zoom=8&map_crosshair=true`;
+  }
+  function centerScale(base, e, n) {
+    return `${base}?center=${r(e)},${r(n)}&scale=10000`;
+  }
+  function cantonMapUrl(stateName, lon, lat) {
+    const code = cantonCodeFromName(stateName);
+    if (!code) return null;
+    const build = MAP_URL[code];
+    if (!build) return null;
+    const { e, n } = wgs84ToLv95(lon, lat);
+    return build(e, n);
+  }
+  function cantonMapUrlForGeometry(geometry, stateName) {
+    const points = samplePoints(geometry);
+    const mid = points[Math.floor(points.length / 2)] ?? [0, 0];
+    return cantonMapUrl(stateName, mid[0], mid[1]);
+  }
+
+  // assets/canton-flags/be.svg
+  var be_default = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="406.505" height="492.818" viewBox="-176.002 -213.546 406.505 492.818"><path fill="%23ffd72e" d="M27.127-212.022h201.852V84.685c0 106.625-90.297 193.063-201.723 193.063-111.406 0-201.734-86.438-201.734-193.063v-296.707z"/><path d="M210.557-11.084c-3.766-7.023-31.813-35.09-66.813-54.191-15.422-8.426-63.109-34.066-102.172-41.242-4.227-.773-7.898-2.629-12.164-1.641-1.77.41-4.414-2.152-1.367-3.902 1.672-.969 3.375-1.77 12.031-1.609-7.359-5.16-9.801-4.367-21.527-4.148 2.496-4.777 16.152-4.785 16.152-4.785s-6.289-3.891-25.023-2.535c3.789-3.137 11.145-4.594 11.145-4.594s-10.227-4.207-21.969 1.176c-.953.434-2.066 1.352-4.352 1.488-2.289.137-7.961-.68-8.891-.879-.91-.211-4.504-.832-4.102-4.129.375-3.289 3.207-3.359 3.926-3.426.703-.094 9.168.539 11.367-3.527 1.488-2.766 4.281-13.574-3.352-16.688-10.91-4.441-16.414-.777-18.047-.391-1.648.367-3.902-1.313-3.902-1.313s-8.418-8.578-11.145-10.625c-2.738-2.031-10.594-5.703-16.563-6.734-1.32-.211-3.672-.859-4.031-1.16-1.359-1.137-5.848-1.785-7.445-1.656-1.992.168-6.313-.512-8.648 3.023-1.488 2.246-2.641 2.305-5.617 2.785-2.969.484-10.801.039-10.801.039s-10.094-.047-13.352-2.273c-1.52-1.047-6.223-5.281-7.504-6.816-1.258-1.527-3.238-.598-3.07-.031.773 2.832.168 7.992-2.84 11.344-3.457 3.801-7.363 7.395-8.043 8.234-.695.832-1.816 4.879.602 6.414 2.406 1.512 4.305 2.648 4.305 2.648s-1.555 10.023-1.219 13.039c-2.277-.969-6.23-3.113-8.621-5.031-15.625-12.551-16.93-26.582-20.16-27.113-3.234-.527-7.664 15.961 1.238 27.281 10.289 13.104 30.039 16.168 30.039 16.168s-3.223 4.09-2.855 9.719c-3.43 1.707-3.902 2.875-3.902 2.875s-.289 2.23 1.902 4c60.907-1.435 104.923 56.62 94.747 123.307-1.473 9.672-8.73 33.871-11.633 40.902-2.922 7.031-3.785 18.461-3.785 18.461s-.969 3.555-2.742 3.305c-1.73-.242-1.84-1.648-1.777-2.555.305-1.328-.879-6.539-.406-9.82.496-3.242-1.395-5.586-1.395-5.586s4.688-10.43-7.422-19.461c2.168 11.82-1.73 14.461-1.73 14.461S-67.4 35.966-83.142 36.49c6.801 5.82 7.84 14.195 8.086 14.789-1.941-3.789-17.598-14.164-26.75-.047 15.465.93 18.031 6.75 18.031 6.75s-18.414-6.797-26.313 10.906c8.785-2.281 18.008-.516 18.008-.516s-10.961 2.484-11.094 12.063c6.016-2.922 15.375-.938 15.375-.938s-.273 0-.176.922c1.48.469 8.262 10.641 13.91 13.328 5.656 2.672 37.832 4.625 51.578-1.719 3.488-1.609 3.719-.969 5.016-5.281 4.262-14.172 21.168-52.938 33.031-76.68C23.505-5.878 30.869-16.902 30.9-17.902c.063-1.969-9.754-13.008-10.891-14.266-1.113-1.262.969-1.957.969-1.957s7.43 1.789 10.477 6.148c3.07 4.363 3.609 5.145 2.969 7.465-.656 2.328-6.199 19.043-6.199 19.043s85.887 6.895 86.449 9.75c.586 2.863-26.82 5.406-34 6.93-12.344 2.621-23.922 17.316-22.711 21.488 5 17.344 6.805 60.828 7.203 64.125.422 3.297 4.82 4.953 6.508 5.047 1.672.078 10.57.164 11.406 1.563.805 1.406-.461 1.953-.461 1.953s-1.984 1.438-5.523 1.109c-3.539-.297-24.164-6.031-27.539-9.766-3.344-3.75-5.031-5.656-5.031-5.656s2.016-16.766-14.063-14.922c5.781 8.094 1.406 11.688 1.406 11.688s-6.453-12.359-26.453-6.375c13.512 5.188 13.871 9.047 13.871 9.047s-11.109-5-22.453 5.531c14.977.172 17 5.984 17 5.984s-16.898-3.5-20.336 14.563c12.055-7.445 18.59-2.641 18.59-2.641s-18.633 5.828-13.512 22.227c7.289-7.195 16.512-9.016 16.512-9.016l.25.773s4.422 1.867 8.438 1.922c4.008.047 4.984-.578 4.449-2.789s.313-4.711.352-5.563c.055-.836 1.48-1.063 1.48-1.063s.906-.211 1.203 1.086c.688 2.898-1.5 5.273 1.328 8.586 2.836 3.313 7.211 2.57 8.594 3.086 1.375.508 9.047 1.961 9.047 1.961s21.555 3.773 28.359.867c4.813-2.047 18.938-11.172 22.797-17.5 1.875-3.078 2.688-7.016 3.141-11.344 1.656-16.609 5.922-36.531 17.906-45.938.922-.75 2.875-1.297 3.906-1.938 1.156-.703 2.188-.953 2.625-2.078.328-2.625-4.203-36.469-4.859-45.859-1.156-16.992-13.875-30.105-13.875-30.105s0-1.113 1.375-1.398c1.383-.305 3.578.246 3.578.246s7.984-.344 13.922 30.922c5.922 31.242 6.484 56.273 12.719 68.094 1.906 3.578 10.625 17.656 17.656 31.414 5.813 11.375 7.531 19.359 9.875 24.047 5.188 10.359.188 23.125-1.859 24.523-2.063 1.414-2.203.102-2.922-.328-.734-.461.25-5.445.25-5.445s2.016-2.406-.75-6.719c-2.797-4.328-15.438-7.422-15.438-7.422s-1.875-1.359-3.094-2.016c1.297-12.625-19.805-13.813-19.805-13.813s6.086 8.625 5.227 16.953c-15.164-11.164-27.453-.031-27.453-.031s11.453 2.016 16.609 11.094c-20.109-5.156-22.297 9.719-22.297 9.719s8.164-3.719 16.891 3.047c-18.922 1.406-16.016 16.359-16.016 16.359s4.938-6.516 19.625-1.609c-.281.438-12.063 9.203-4.734 23.477 1.719-3.695 6.141-9.695 11.391-11.875.531.672.625.625.797.789 0 0 11.688-5 17.641-5.164 5.969-.164 10.844-.523 18.563-1.313 7.719-.805 12.172-4.438 15.797-6.523 3.609-2.078 17.813-20.313 21.422-23.461 3.609-3.164 4.531-8.539 4.531-8.539s2.375-7.625 3.75-25.133c1.375-17.523 2.392-41.633 2.017-56.984C208.965 47.277 196.45.144 196.45.144s-.047-1.574 1.078-1.969c1.148-.383 1.109.012 2.672 2.504 1.547 2.465 4.546 15.852 7.046 17.801.969.746.805 3.594 4.655 2.105 1.188-.449 2.97-8.063 3.625-12.215.687-4.216-1.219-12.439-4.969-19.454m-323.101-136.864c.457.168.961.43.961.43s-1.023 8.938.281 12.953c-5.527-2.09-10-3.703-10-3.703s5.261-8.145 8.758-9.68m.226 30.223c-.219.016-.855-.078-1.754-.16-4.07-3.375-4.422-9.23-4.422-9.23s9.023 2.199 10.543 2.902c-.726 1.91-3.922 4.328-4.367 6.488m11.07 1.808c-1.113-.352-3.664-2.672-3.766-4.176-.098-2.055-.586-3.359-.586-3.359s13.184 3.633 17.023 10.191c-5.358-1.327-11.557-2.304-12.671-2.656m-8.679-18.058s4.328-6.879 8.055-8.637c12.426 6.48 18.379 17.695 20.504 25.629-6.895-8.719-28.559-16.992-28.559-16.992"/><path d="M-109.529-18.303c16.02-4.672 32.539-22.516 44.113-34.086 6.578-6.586 11.328-10 12.648-11.047 1.938 1.574 10.367 15.512 14.449 28.992 3.152 10.406 2.887 21.191 2.734 24.285-.502 9.418-6.709 11.289-6.709 11.289S-80.119 13.548-86.63 13.388c-2.992-.09-26.113 5.453-32.816 4.824-17.625-1.695-21.879-10.113-21.879-10.113l-8.809-15.297s-1.113-3.582 2.113-2.504c3.23 1.105 3.652 1.168 6.559 1.969 2.902.816.582-2.078.582-2.078s-2.863-1.602-5.375-2.707c-8.113-3.566-8.977-15.457-8.977-15.457s-.414-9.828-.016-17.023c.395-7.191-16.289-6.734-16.289-6.734s6.387-13.168 26-5.52c.176-7.066-17.023-12.367-17.023-12.367s10.563-11.191 29.992 4.438c1.016-11.367-8.84-20.43-8.84-20.43s15.543-2.824 21.898 18.863c6.605-5.336 2.59-19.871 2.59-19.871s15.039 8.359 10.336 23.645c7.832-1.383 10.77-11.598 10.77-11.598s6.039 10.648-3.73 21.113c-3.672 3.926-4.496 2.773-4.496 2.773s-15.613 20.395-5.605 46.305c1.277 3.336 3.438.824 3.727-.672.28-1.489-.537-7.008-3.611-13.25M-38.646-170.405s11.48 10.328 12.559 11.641c.938 1.109 7.855-2.656 11.449-1.816 2.191.512-1.168-6.199-2.543-8.145-1.387-1.922-5.977-6.785-11.516-5.863-4.711.785-9.949 4.183-9.949 4.183"/><path fill="%23e7423f" d="M-87.919-116.557c-5.895-7.098-18.617-10.055-33.289-13.777-10.605-2.703-22.109-7.293-27.832-15.496-3.008-4.27-4.438-8.973-4.613-13.191-.129-3.16.32-5.918.902-7.75.297.559.578 1.152.84 1.703 2.594 5.473 6.785 14.766 17.504 23.094 5.113 3.945 14.219 6.664 23.098 10.027 9.535 3.277 19.75 8.137 25.961 14.445 0 0 3.934 4.371 4.309 5.84-.895-.168-2.301-.496-4.031-.781-.607-1.579-2.849-4.114-2.849-4.114"/><path fill="none" stroke="%23e41e2e" stroke-width=".888" d="M-87.919-116.557c-5.895-7.098-18.617-10.055-33.289-13.777-10.605-2.703-22.109-7.293-27.832-15.496-3.008-4.27-4.438-8.973-4.613-13.191-.129-3.16.32-5.918.902-7.75.297.559.578 1.152.84 1.703 2.594 5.473 6.785 14.766 17.504 23.094 5.113 3.945 14.219 6.664 23.098 10.027 9.535 3.277 19.75 8.137 25.961 14.445 0 0 3.934 4.371 4.309 5.84-.895-.168-2.301-.496-4.031-.781-.607-1.579-2.849-4.114-2.849-4.114z"/><path fill="%23fff" d="M-122.189-118.174c1.52-.031 3.453-.207 5-.031-2.16-1.52-3.074-7.473-3.074-7.473s-2.168 3.375-1.926 7.504M-110.255-117.381c1.504.078 2.57.406 5.098.84-2.227-1.488-1.297-4.254-2.168-5.465-1.548 2.531-2.497 2.793-2.93 4.625M-109.759-137.756c2.344-3.711 5.527-5.961 5.703-6.008-1.086-.504-5.59-2.785-5.59-2.785s-.344 8.457-.113 8.793M-121.83-141.045s4.926-6.793 7.102-7.809c-3.375-.992-4.781-1.793-5.902-2.43-.946 5.246-1.2 10.239-1.2 10.239"/><path fill="%23e7423f" d="M104.62 22.49s13.344-1.934 20.766 4.363c-.094-1.234-.953-8.289-.953-8.289s-13.016-4.625-19.813 3.926"/><path fill="none" stroke="%23e41e2e" stroke-width=".888" d="M104.62 22.49s13.344-1.934 20.766 4.363c-.094-1.234-.953-8.289-.953-8.289s-13.016-4.625-19.813 3.926z"/><path fill="%23fff" d="M-66.431-170.573s3.633.297 4.93 3.832c1.238 3.438 1.816 8.512-.785 18.961-.23.961-2.129.758-2.176-.426-.039-1.191 1.168-6.391 1.496-9.406s-.082-6.73-1.09-7.641c-.824-.746-2.375-1.359-2.711-1.426-.336-.078-2.145-.445-1.77-2.16.387-1.718 2.106-1.734 2.106-1.734"/><path fill="%23fff" d="M-65.576-160.366c1.816-.504 1.016-2.375-1.23-3.191-2.242-.824-7.359.496-8.945 5.313-1.473 4.406 5.648 8.055 7.121 7.984 2.52-.105 3.176-3.457 1.664-4.146-1.488-.703-3.855-.953-3.648-2.896.198-1.95 3.23-2.544 5.038-3.064"/><path fill="%23e7423f" d="M-105.392-60.1s4.219.168 8.387-6.121c-.336 5.625-4.824 10.367-4.824 10.367zM-164.767-54.292c6.098-4.961 18.375-.012 18.375-.012l-6.262 5.434c0-.007-2.527-5.496-12.113-5.422M-154.888-69.924c8.824-2.809 21.234 7.992 21.234 7.992s-6.563 3.375-8.496 4.336c.145-.731-.953-8.656-12.738-12.328M-134.697-81.991c8.684 2.961 12.059 17.281 12.059 17.281l-6.945 1.383c-.008 0 1.96-9.109-5.114-18.664M-116.759-64.733c3.242-3.375 5.383-8.695 4-14.938 2.281 2.098 5.145 10.746 2.648 17.043-1.023-.539-2.273-1.906-6.648-2.105M-55.751 54.888c-1.207-.75-3.086-1.078-4.383-1.094 3.605-3.469 2.816-8.672 2.816-8.672s3.43 5.454 1.567 9.766M-65.056 53.904c-3.438.328-5.816 1.078-6.488 1.438-.512-9.867-4.016-14.406-4.016-14.406s8.051 4.624 10.504 12.968M-74.72 56.544c-1.75 1.25-1.43.75-4.184 2.836-3.238-5.297-6.758-9.758-18.16-10.039 8.688-6.234 19.801 1.235 22.344 7.203M-103.791 64.919c3.168-6.047 16.129-6.375 22.48-2.883-1.93 2.273-2.387 3.305-3.113 5.797-5.765-3.632-16.253-3.242-19.367-2.914M-98.791 76.185c4.305-5.75 13.031-5.766 13.168-5.5-.273.375-1.785 5.109-1.785 5.734-.429-.281-5.207-1.531-11.383-.234M41.401 94.388a126 126 0 0 0-6.422-1.234c.719-.703 2.828-6.281.313-10.422 1.796.469 5.984 1.969 6.109 11.656M23.104 95.013c2.465-1.531 4.074-1.719 5.992-1.625-2.238-5.391-12.992-7.516-14.863-6.922 1.191.532 8.566 4.157 8.871 8.547M4.471 98.044c7.219-3.5 14.012-.859 14.539-.5-.809.766-2.93 3.063-3.824 5.195-1.594-3.726-10.715-4.695-10.715-4.695M-2.349 115.419c.574-1.375 7.398-8.172 15.055-6-1.176 2.109-1.367 3.344-.793 5.125-7.473-3.015-14.008.797-14.262.875M.639 134.654c1.785-9.078 8.402-11.672 11.648-13.188-.094 1.422.41 5.422 1.16 6.531-.894-.187-9.07 2.094-12.808 6.657M141.12 141.982c-2.297.625-5.688 2.047-6.906 2.813.406-5.469-1.313-10.813-2.898-13.188 2.616.359 10.491 3.641 9.804 10.375M123.667 154.732c-.734-2.359-7.406-9.922-13.391-11.109 4.609-2.516 12.656-2.234 20.047 3.922-2.922 1.906-6 5.937-6.656 7.187M102.542 161.544c3.82-6.859 15.703-4.094 19.063-2.781-1.453 1.594-2.766 4.359-3.109 8.688-2.939-5.25-12.173-6.891-15.954-5.907M101.948 179.107c-.25.641 1.734-8.563 16.063-7.859-.422 3.492-.469 4.953.063 8.375-9.282-3.875-16.126-.516-16.126-.516M114.432 199.482s-1.313-7.344 4.922-13.047c.625 3.141 1.578 4.969 2.828 6.203-3.812 1.25-7.75 6.844-7.75 6.844"/><path fill="none" stroke="%23fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.176" d="M-114.63-57.831c-3.074 2.855-6.344 2.313-9.129 5.504-2.023 2.32-7.48 10.219-4.582 23.145 1.895 8.418 3.664 23.219 4.75 28.008 1.457 6.426-2.262 12.504-4.855 12.602"/><path fill="none" stroke="%23fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.664" d="M36.26 99.529c.25 3.703.25 5.859 1.453 9.281.859 2.469 5.625 4.297 14.719 6.891 5.563 1.594 15.875 5.141 19.094 6.516 7.422 3.156 4.266 8.211 4.391 11"/><path fill="%23e7423f" d="M-174.478 84.685c0 106.625 90.328 193.063 201.734 193.063 46.254 0 88.879-14.906 122.91-39.969L-174.478 40.732zM228.979-212.022H-71.904L228.979-29.381z"/><path fill="none" stroke="%23000" stroke-width="3.048" d="M27.127-212.022h201.852V84.685c0 106.625-90.297 193.063-201.723 193.063-111.406 0-201.734-86.438-201.734-193.063v-296.707z"/></svg>';
+
+  // assets/canton-flags/bl.svg
+  var bl_default = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="650" height="650" viewBox="-176.966 -215.01 650 650"><path d="M-176.966-215.01h650v650h-650z" style="fill:%23fff;fill-opacity:1;stroke:none;stroke-width:1.2301;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"/><path d="M138.45-163.142a22.052 22.127 0 0 0-22.053 22.127 22.052 22.127 0 0 0 2.471 10.16c-8.365 4.215-16.12 8.75-23.259 13.66a22.052 22.127 0 0 0-17.67-8.93A22.052 22.127 0 0 0 55.886-104a22.052 22.127 0 0 0 7.658 16.748 124.8 124.8 0 0 0-13.64 22.245 22.052 22.127 0 0 0-10.373-2.612 22.052 22.127 0 0 0-22.053 22.13 22.052 22.127 0 0 0 19.885 22.02 191 191 0 0 0-.67 4.422C8.21 189.764 14.457 242.41-13.222 359.96c23.225-7.883 42.724-68.125 64.07-102.414l31.29 127.083 33.523-131.569c20.536 36.83 32.018 97.28 61.836 109.89-17.528-106.155-34.106-223.708-43.954-348.358-2.925-37.033 4.413-48.689 16.39-69.523 12.306-21.408 80.075-44.75 89.397 13.455 7.597 47.431-44.265 45.961-58.108 17.943l-25.33 20.184c20.404 16.528 29.398 42.768 75.984 33.247A22.052 22.127 0 0 0 253.089 46a22.052 22.127 0 0 0 22.051-22.129 22.052 22.127 0 0 0-5.853-14.981c4.606-7.17 8.45-16.233 11.496-26.298a22.052 22.127 0 0 0 7.23 1.249 22.052 22.127 0 0 0 22.051-22.127 22.052 22.127 0 0 0-22.05-22.129 22.052 22.127 0 0 0-1.019.037c-.493-9.054-2.35-17.878-5.88-26.247a22.052 22.127 0 0 0 10.517-18.842 22.052 22.127 0 0 0-22.051-22.126 22.052 22.127 0 0 0-16.163 7.115c-7.201-5.375-15.184-9.933-23.587-13.65a22.052 22.127 0 0 0 1.022-6.65 22.052 22.127 0 0 0-22.05-22.126 22.052 22.127 0 0 0-21.547 17.477c-3.962-.41-7.893-.649-11.758-.697-5.296-.066-10.46.228-15.427.852a22.052 22.127 0 0 0-21.62-17.871z" style="fill:%23e8423f;fill-opacity:1;stroke:%230b0000;stroke-width:4;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"/><path d="M82.137 384.63s-.988-200.1-2.234-299.768c-.287-22.935 1.03-45.121 2.235-68.027.99-18.829-4.595-40.14 8.195-69.522 6.54-15.024 13.562-24.092 23.84-32.892 11.658-9.983 27.038-17.146 40.974-20.932 11.05-3.001 30.427-5.622 41.72-3.737 12.738 2.126 24.122 5 35.015 11.96 9.637 6.159 18.217 16.931 23.84 26.912 4.984 8.85 8.336 18.991 8.194 29.155.937 32.165-19.249 43.656-34.27 44.056-16.07.428-19.345-4.655-28.31-7.625" style="fill:none;fill-rule:evenodd;stroke:%23000;stroke-width:4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"/><path d="M5.235 13.437h154.193v72.758H5.235z" style="fill:%23e8423f;fill-opacity:1;stroke:%23000;stroke-width:4;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"/><path d="M-12.146 31.547H176.81v36.538H-12.146z" style="fill:%23e8423f;fill-opacity:1;stroke:%23000;stroke-width:4;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"/></svg>';
+
+  // assets/canton-flags/ge.svg
+  var ge_default = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="256" height="512" fill="%23fcd116"/><rect x="256" width="256" height="512" fill="%23da291c"/></svg>%0A';
+
+  // assets/canton-flags/ne.svg
+  var ne_default = 'data:image/svg+xml,<?xml version="1.0" encoding="UTF-8"?>%0D%0A<svg xmlns="http://www.w3.org/2000/svg" width="540" height="540">%0D%0A%09<rect width="540" height="540" fill="%23e8423f"/>%0D%0A%09<rect width="360" height="540" fill="%23fff"/>%0D%0A%09<rect width="180" height="540" fill="%2316a74e"/>%0D%0A%09<path d="M 450,20 v 140 M 380,90 h 140" stroke="%23fff" stroke-width="20"/>%0D%0A</svg>';
+
+  // assets/canton-flags/so.svg
+  var so_default = 'data:image/svg+xml,<?xml version="1.0"?>%0A<svg xmlns="http://www.w3.org/2000/svg" width="470" height="470">%0A<path d="m0,0h470v470H0" fill="%23FFF"/>%0A<path d="m0,0h470v235H0" fill="%23E7423F"/>%0A</svg>';
+
+  // assets/canton-flags/sz.svg
+  var sz_default = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="475" height="475" viewBox="-207.698 -207.938 475 475"><path fill="%23e8423f" d="M-207.698-207.938h475v475h-475z"/><path fill="%23fff" d="M-185.448-95.375h68.02v68.02h22.293v-68.02h68.02v-22.305h-68.02v-68.008h-22.294v68.008h-68.02z"/></svg>';
+
+  // assets/canton-flags/ti.svg
+  var ti_default = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="470" height="470"><path fill="%23268bcc" d="M0 0h470v470H0"/><path fill="%23e8423f" d="M0 0h470v235H0"/></svg>';
+
+  // assets/canton-flags/vd.svg
+  var vd_default = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="%23fff"/><rect width="512" height="256" fill="%23007a33"/></svg>%0A';
+
+  // src/ui/canton-link.ts
+  var FLAGS = {
+    be: be_default,
+    bl: bl_default,
+    ge: ge_default,
+    ne: ne_default,
+    so: so_default,
+    sz: sz_default,
+    ti: ti_default,
+    vd: vd_default
+  };
+  function cantonMapLink(geometry, cantonName) {
+    const url = cantonMapUrlForGeometry(geometry, cantonName);
+    const code = cantonCodeFromName(cantonName);
+    if (!url || !code) return null;
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.title = t("cantonMapLinkTitle", { canton: code.toUpperCase() });
+    const flag = FLAGS[code];
+    if (flag) {
+      a.className = "chk-canton-link";
+      const img = document.createElement("img");
+      img.className = "chk-canton-flag";
+      img.src = flag;
+      img.alt = code.toUpperCase();
+      a.appendChild(img);
+    } else {
+      a.className = "chk-canton-link chk-canton-badge";
+      a.textContent = code.toUpperCase();
+    }
+    return a;
   }
 
   // src/ui/styles.ts
@@ -2332,6 +2482,11 @@ ${statusChipRules}
 .chk-arrow { color: var(--chk-muted); }
 .chk-suggestion { font-weight: bold; color: var(--chk-primary); }
 .chk-note { color: var(--chk-muted); font-style: italic; }
+.chk-canton-link { display: inline-flex; align-items: center; text-decoration: none; }
+.chk-canton-flag { height: 11px; width: auto; vertical-align: middle;
+  border: 1px solid rgba(0,0,0,0.2); border-radius: 1px; }
+.chk-canton-badge { font-size: 10px; font-weight: 700; color: var(--chk-primary);
+  border: 1px solid var(--chk-border); border-radius: 3px; padding: 0 3px; line-height: 1.4; }
 .chk-count { color: var(--chk-muted); background: var(--chk-bg); border: 1px solid var(--chk-border); border-radius: 9px; padding: 0 6px; font-size: 10px; }
 .chk-fix-all { font-size: 11px; padding: 3px 9px; border: none; border-radius: 6px; background: var(--chk-primary); color: var(--chk-primary-contrast); white-space: nowrap; flex-shrink: 0; }
 .chk-fix-all:hover { filter: brightness(1.08); }
@@ -2388,7 +2543,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
   }
 
   // src/ui/tab.ts
-  var ROAD_TYPE_LABELS = new Map(ROAD_TYPE_OPTIONS.map((r) => [r.id, r.label]));
+  var ROAD_TYPE_LABELS = new Map(ROAD_TYPE_OPTIONS.map((r2) => [r2.id, r2.label]));
   var LEGEND_KEYS = {
     COSMETIC: "legendCOSMETIC",
     VARIANT: "legendVARIANT",
@@ -2429,11 +2584,11 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       const match = getComputedStyle(node).backgroundColor.match(/rgba?\(([^)]+)\)/);
       if (match && match[1]) {
         const parts = match[1].split(",").map((p) => parseFloat(p));
-        const r = parts[0] ?? 0;
+        const r2 = parts[0] ?? 0;
         const g = parts[1] ?? 0;
         const b = parts[2] ?? 0;
         const a = parts[3] ?? 1;
-        if (a > 0) return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5;
+        if (a > 0) return (0.299 * r2 + 0.587 * g + 0.114 * b) / 255 < 0.5;
       }
       node = node.parentElement;
     }
@@ -2565,7 +2720,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       brand.append(
         el("span", "chk-brand-icon", "🇨🇭"),
         el("span", "chk-brand-title", "CH Names"),
-        el("span", "chk-brand-version", `v${"1.15.1"}`)
+        el("span", "chk-brand-version", `v${"1.16.0"}`)
       );
       const toolbar = el("div", "chk-toolbar");
       const rescanBtn = el("button", "chk-btn", t("rescan"));
@@ -2841,6 +2996,12 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       geoLink.title = t("geoAdminLinkTitle");
       geoLink.addEventListener("click", (ev) => ev.stopPropagation());
       row.appendChild(geoLink);
+      const cantonLink = cantonMapLink(issue.geometry, issue.cantonName);
+      if (cantonLink) {
+        cantonLink.classList.add("chk-locate");
+        cantonLink.addEventListener("click", (ev) => ev.stopPropagation());
+        row.appendChild(cantonLink);
+      }
       const locateBtn = el("button", "chk-locate", "⌖");
       locateBtn.title = t("locateTitle");
       locateBtn.addEventListener("click", (ev) => {
@@ -3209,6 +3370,8 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
       geoLink.rel = "noopener";
       geoLink.title = t("geoAdminLinkTitle");
       head.appendChild(geoLink);
+      const cantonLink = cantonMapLink(issue.geometry, issue.cantonName);
+      if (cantonLink) head.appendChild(cantonLink);
       const detail = document.createElement("div");
       detail.className = "chk-muted";
       detail.textContent = t(LEGEND_KEYS[issue.status]);
@@ -3338,7 +3501,7 @@ a.chk-geolink { text-decoration: none; border: 1px solid var(--chk-border); bord
     new EditPanelBox(sdk2, scanner, settings).init();
     registerShortcuts(sdk2, scanner, settings, { nextIssue: () => tab.selectNextIssue() });
     scanner.start();
-    log.info(`v${"1.15.1"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
+    log.info(`v${"1.16.0"} ready (SDK ${sdk2.getSDKVersion()}, WME ${sdk2.getWMEVersion()})`);
   }
   main().catch((err) => log.error("Initialization failed", err));
 })();

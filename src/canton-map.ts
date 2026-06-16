@@ -75,12 +75,13 @@ const MAP_URL: Record<string, (e: number, n: number) => string> = {
   // VD — custom ArcGIS; permalink.js builds center,scale,wkid. The non-www host
   // 302-redirects and drops the query, so target www directly.
   vd: (e, n) => `https://www.geo.vd.ch/?center=${r(e)},${r(n)}&scale=10000&wkid=2056`,
-  // GeoMapFish (map_x/map_y/map_zoom + crosshair) — NE confirmed working live.
+  // GeoMapFish (map_x/map_y/map_zoom + crosshair) — recenter confirmed live.
+  // JU (geo.jura.ch) and GR (map.geo.gr.ch) are intentionally absent: JU's portal
+  // returns errors / closes the connection, and GR forcibly redirects to its parcel
+  // theme and resets the zoom to the whole canton — neither recenters usably.
   ne: (e, n) => geomapfish("https://sitn.ne.ch/", e, n),
-  ju: (e, n) => geomapfish("https://geo.jura.ch/", e, n),
   sz: (e, n) => geomapfish("https://map.geo.sz.ch/", e, n),
   ti: (e, n) => geomapfish("https://map.geo.ti.ch/", e, n),
-  gr: (e, n) => geomapfish("https://map.geo.gr.ch/", e, n),
   bl: (e, n) => geomapfish("https://geoview.bl.ch/", e, n),
   // GE — Topomat/ESRI viewer (center,scale found in JS).
   ge: (e, n) => centerScale("https://map.sitg.ge.ch/app/", e, n),

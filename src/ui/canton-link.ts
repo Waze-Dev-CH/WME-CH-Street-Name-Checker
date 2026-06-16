@@ -4,8 +4,6 @@ import { t } from "../i18n";
 import beFlag from "../../assets/canton-flags/be.svg";
 import blFlag from "../../assets/canton-flags/bl.svg";
 import geFlag from "../../assets/canton-flags/ge.svg";
-import grFlag from "../../assets/canton-flags/gr.svg";
-import juFlag from "../../assets/canton-flags/ju.svg";
 import neFlag from "../../assets/canton-flags/ne.svg";
 import soFlag from "../../assets/canton-flags/so.svg";
 import szFlag from "../../assets/canton-flags/sz.svg";
@@ -17,8 +15,6 @@ const FLAGS: Record<string, string> = {
   be: beFlag,
   bl: blFlag,
   ge: geFlag,
-  gr: grFlag,
-  ju: juFlag,
   ne: neFlag,
   so: soFlag,
   sz: szFlag,

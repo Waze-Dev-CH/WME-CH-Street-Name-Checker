@@ -28,11 +28,11 @@ describe("cantonCodeFromName", () => {
 });
 
 describe("cantonMapUrl", () => {
-  it("builds GeoMapFish URLs (map_x/map_y) for NE, JU, GR, BL in LV95", () => {
+  it("builds GeoMapFish URLs (map_x/map_y) for NE, SZ, TI, BL in LV95", () => {
     for (const [name, host] of [
       ["Neuchâtel", "sitn.ne.ch"],
-      ["Jura", "geo.jura.ch"],
-      ["Graubünden", "map.geo.gr.ch"],
+      ["Schwyz", "map.geo.sz.ch"],
+      ["Ticino", "map.geo.ti.ch"],
       ["Basel-Landschaft", "geoview.bl.ch"],
     ] as const) {
       const url = cantonMapUrl(name, 6.75, 47.0)!;
@@ -65,6 +65,9 @@ describe("cantonMapUrl", () => {
     expect(cantonMapUrl("Schaffhausen", 8.63, 47.7)).toBeNull();
     expect(cantonMapUrl("Fribourg", 7.16, 46.8)).toBeNull();
     expect(cantonMapUrl("Fribourg / Freiburg", 7.16, 46.8)).toBeNull();
+    // JU and GR portals don't recenter usably → no button (still recognised by name).
+    expect(cantonMapUrl("Jura", 7.16, 47.36)).toBeNull();
+    expect(cantonMapUrl("Graubünden", 9.53, 46.85)).toBeNull();
   });
 });
 

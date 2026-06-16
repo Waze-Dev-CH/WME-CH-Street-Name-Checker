@@ -3,6 +3,14 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.16.0] - 2026-06-16
+
+### Added
+- A second link button next to the map.geo.admin.ch "↗" link opens the segment's location on the relevant **cantonal geoportal**, recentred on the street. The canton is resolved from the segment's state across languages, case and accents (including bilingual names like "Fribourg / Freiburg"). The button shows the canton flag when available, otherwise its two-letter code. Available for the cantons whose recenter permalink is confirmed working live: VD, NE, SZ, TI, BL, GE, BE and SO. Cantons without a confirmed portal link simply get no button.
+
+### Fixed
+- Removed the Jura (JU) and Graubünden (GR) geoportal buttons: a live check showed JU's portal returns errors and GR forcibly redirects to its parcel theme zoomed out to the whole canton, so neither recentred on the segment. Both cantons stay recognised and will get a button again once a working permalink is confirmed.
+
 ## [1.15.1] - 2026-06-15
 
 ### Changed
